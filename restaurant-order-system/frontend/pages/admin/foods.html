@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Foods — FoodHub Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="admin-layout"></div>
+
+  <!-- Food Form Modal -->
+  <div class="modal fade" id="foodModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="modal-title-text">Add Food Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pb-4">
+          <form id="food-form">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Food Name *</label>
+                <input type="text" class="form-control" id="fd-name" required placeholder="e.g. Chicken Biryani">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Category *</label>
+                <select class="form-select" id="fd-category" required>
+                  <option value="">Select Category</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" id="fd-desc" rows="2" placeholder="Delicious aromatic rice..."></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Ingredients</label>
+                <input type="text" class="form-control" id="fd-ingredients" placeholder="Basmati rice, chicken, spices (comma separated)">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Price (₹) *</label>
+                <input type="number" class="form-control" id="fd-price" required step="0.01">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Discount Price (₹)</label>
+                <input type="number" class="form-control" id="fd-disc-price" step="0.01" placeholder="Optional">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Cooking Time (mins)</label>
+                <input type="number" class="form-control" id="fd-time" value="30">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Calories (kcal)</label>
+                <input type="number" class="form-control" id="fd-calories" value="0">
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Image URL / Path</label>
+                <input type="text" class="form-control" id="fd-image" placeholder="/uploads/foods/chicken-biryani.jpg">
+              </div>
+
+              <!-- Switches -->
+              <div class="col-6 col-md-3">
+                <div class="form-check form-switch mt-2">
+                  <input class="form-check-input" type="checkbox" id="fd-veg" checked>
+                  <label class="form-check-label fw-600" for="fd-veg">Is Vegetarian</label>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="form-check form-switch mt-2">
+                  <input class="form-check-input" type="checkbox" id="fd-available" checked>
+                  <label class="form-check-label fw-600" for="fd-available">Available</label>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="form-check form-switch mt-2">
+                  <input class="form-check-input" type="checkbox" id="fd-featured">
+                  <label class="form-check-label fw-600" for="fd-featured">Featured Item</label>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="form-check form-switch mt-2">
+                  <input class="form-check-input" type="checkbox" id="fd-bestseller">
+                  <label class="form-check-label fw-600" for="fd-bestseller">Bestseller</label>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary-custom w-100 mt-4">
+              Save Food Item
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../../js/api.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/admin.js"></script>
+  <script>
+    if (!Admin.requireAdmin()) throw new Error('Unauthorized');
+
+    document.getElementById('admin-layout').innerHTML = Admin.layout('foods', `
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0 fw-bold">Manage Food Items</h4>
+        <button class="btn btn-primary-custom btn-sm" id="btn-add-food">
+          <i class="fa-solid fa-plus me-1"></i>Add Food
+        </button>
+      </div>
+
+      <div class="glass-card no-hover p-4">
+        <div class="table-responsive hide-scroll">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Food Info</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Veg/NV</th>
+                <th>Stock Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="foods-table-body">
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">Loading foods...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `);
+
+    const foodModal = new bootstrap.Modal(document.getElementById('foodModal'));
+    let editingId = null;
+    let categoryMap = {};
+
+    async function loadCategories() {
+      try {
+        const res = await API.getCategories();
+        const select = document.getElementById('fd-category');
+        select.innerHTML = '<option value="">Select Category</option>';
+        
+        (res.data || []).forEach(c => {
+          categoryMap[c.id] = c.name;
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadFoods() {
+      try {
+        const res = await API.getFoods();
+        const tbody = document.getElementById('foods-table-body');
+        const foods = res.data || [];
+
+        if (foods.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No foods found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = foods.map(f => {
+          const img = Utils.getFoodImage(f);
+          return `
+          <tr id="food-row-${f.id}">
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <img src="${img}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">
+                <div>
+                  <div class="fw-bold">${f.name}</div>
+                  <div class="text-muted small" style="max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.description || ''}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge bg-secondary">${f.category_name || categoryMap[f.category_id] || 'N/A'}</span></td>
+            <td>
+              <strong>${Utils.formatPrice(f.discount_price || f.price)}</strong>
+              ${f.discount_price ? `<br><small class="text-decoration-line-through text-muted">${Utils.formatPrice(f.price)}</small>` : ''}
+            </td>
+            <td>
+              <span class="badge-veg ${f.is_veg ? 'veg' : 'non-veg'}" style="position:static;display:inline-flex;"></span>
+            </td>
+            <td>
+              <span class="badge bg-${f.is_available ? 'success' : 'danger'}">${f.is_available ? 'In Stock' : 'Out of Stock'}</span>
+            </td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-secondary me-1" onclick="editFood(${f.id}, '${f.name.replace(/'/g, "\\'")}', ${f.category_id}, '${(f.description || '').replace(/'/g, "\\'")}', '${(f.ingredients || '').replace(/'/g, "\\'")}', ${f.price}, ${f.discount_price || 'null'}, ${f.cooking_time}, ${f.calories}, '${f.image || ''}', ${!!f.is_veg}, ${!!f.is_available}, ${!!f.is_featured}, ${!!f.is_bestseller})">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteFood(${f.id})">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>`;
+        }).join('');
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    }
+
+    document.getElementById('btn-add-food').addEventListener('click', () => {
+      editingId = null;
+      document.getElementById('modal-title-text').textContent = 'Add Food Item';
+      document.getElementById('fd-name').value = '';
+      document.getElementById('fd-category').value = '';
+      document.getElementById('fd-desc').value = '';
+      document.getElementById('fd-ingredients').value = '';
+      document.getElementById('fd-price').value = '';
+      document.getElementById('fd-disc-price').value = '';
+      document.getElementById('fd-time').value = '30';
+      document.getElementById('fd-calories').value = '0';
+      document.getElementById('fd-image').value = '';
+      document.getElementById('fd-veg').checked = true;
+      document.getElementById('fd-available').checked = true;
+      document.getElementById('fd-featured').checked = false;
+      document.getElementById('fd-bestseller').checked = false;
+      foodModal.show();
+    });
+
+    function editFood(id, name, catId, desc, ingredients, price, discPrice, time, calories, image, isVeg, isAvailable, isFeatured, isBestseller) {
+      editingId = id;
+      document.getElementById('modal-title-text').textContent = 'Edit Food Item';
+      document.getElementById('fd-name').value = name;
+      document.getElementById('fd-category').value = catId;
+      document.getElementById('fd-desc').value = desc;
+      document.getElementById('fd-ingredients').value = ingredients;
+      document.getElementById('fd-price').value = price;
+      document.getElementById('fd-disc-price').value = discPrice !== null ? discPrice : '';
+      document.getElementById('fd-time').value = time;
+      document.getElementById('fd-calories').value = calories;
+      document.getElementById('fd-image').value = image;
+      document.getElementById('fd-veg').checked = isVeg;
+      document.getElementById('fd-available').checked = isAvailable;
+      document.getElementById('fd-featured').checked = isFeatured;
+      document.getElementById('fd-bestseller').checked = isBestseller;
+      foodModal.show();
+    }
+
+    document.getElementById('food-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const name = document.getElementById('fd-name').value.trim();
+      const category_id = parseInt(document.getElementById('fd-category').value);
+      const description = document.getElementById('fd-desc').value.trim();
+      const ingredients = document.getElementById('fd-ingredients').value.trim();
+      const price = parseFloat(document.getElementById('fd-price').value);
+      const discountVal = document.getElementById('fd-disc-price').value.trim();
+      const discount_price = discountVal !== '' ? parseFloat(discountVal) : null;
+      const cooking_time = parseInt(document.getElementById('fd-time').value) || 30;
+      const calories = parseInt(document.getElementById('fd-calories').value) || 0;
+      const image = document.getElementById('fd-image').value.trim();
+      const is_veg = document.getElementById('fd-veg').checked;
+      const is_available = document.getElementById('fd-available').checked;
+      const is_featured = document.getElementById('fd-featured').checked;
+      const is_bestseller = document.getElementById('fd-bestseller').checked;
+
+      const payload = {
+        category_id, name, description, ingredients, calories, price,
+        discount_price, image, cooking_time, is_veg, is_available, is_featured, is_bestseller
+      };
+
+      try {
+        if (editingId) {
+          await API.updateFood(editingId, payload);
+          Utils.showToast('Food item updated successfully!', 'success');
+        } else {
+          await API.createFood(payload);
+          Utils.showToast('Food item created successfully!', 'success');
+        }
+        foodModal.hide();
+        loadFoods();
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    });
+
+    async function deleteFood(id) {
+      const confirm = await Utils.showConfirm('Delete Food Item?', 'Deleting this item will remove it from the menu.');
+      if (confirm.isConfirmed) {
+        try {
+          await API.deleteFood(id);
+          Utils.showToast('Food item deleted successfully', 'info');
+          loadFoods();
+        } catch (err) {
+          Utils.showToast(err.message, 'error');
+        }
+      }
+    }
+
+    loadCategories().then(loadFoods);
+  </script>
+</body>
+</html>

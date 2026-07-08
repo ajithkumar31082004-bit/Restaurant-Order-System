@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Order — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <div class="page-header">
+    <div class="container">
+      <h1><i class="fa-solid fa-map-location-dot me-2"></i>Track Order</h1>
+      <p>Follow your delicious meal from our kitchen to your doorstep</p>
+    </div>
+  </div>
+
+  <section class="py-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-6">
+          
+          <!-- Tracker Lookup Form -->
+          <div class="glass-card no-hover p-4 mb-4">
+            <h5 class="fw-bold mb-3">Track Another Order</h5>
+            <div class="input-group">
+              <input type="text" class="form-control" id="order-id-input" placeholder="Enter Order ID (e.g. ORD1001)">
+              <button class="btn btn-primary-custom" id="track-btn" style="border-radius: 0 12px 12px 0 !important;">
+                <i class="fa-solid fa-location-arrow me-1"></i>Track
+              </button>
+            </div>
+          </div>
+
+          <!-- Tracking Timeline Card -->
+          <div class="glass-card no-hover p-4 p-md-5" id="tracker-card" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+              <div>
+                <h5 class="fw-bold mb-1" id="order-id-title">—</h5>
+                <small class="text-muted" id="order-date">—</small>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-primary" id="current-status-badge">Pending</span>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-4 p-3 rounded-4" style="background: var(--primary-light);">
+              <div class="col-6">
+                <span class="small text-muted d-block">Estimated Delivery</span>
+                <strong id="est-delivery-time">—</strong>
+              </div>
+              <div class="col-6 text-end">
+                <span class="small text-muted d-block">Payment Method</span>
+                <strong id="payment-method-text">—</strong>
+              </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="timeline" id="tracking-timeline" style="--progress: 0%;">
+              <div class="timeline-item completed" id="step-Pending">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6>Order Placed</h6>
+                  <p>We've received your order and are validating details.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="step-Confirmed">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6>Confirmed</h6>
+                  <p>Your order has been accepted by the restaurant.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="step-Preparing">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6>Preparing</h6>
+                  <p>Kitchen is preparing fresh ingredients for your meal.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="step-Cooking">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6>Cooking</h6>
+                  <p>Chefs are cooking up your delicious dish.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="step-Packed">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6>Packed</h6>
+                  <p>Your order is hot and safely packed for transit.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="step-Out for Delivery">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6>Out for Delivery</h6>
+                  <p>Delivery rider is on the way to your address.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="step-Delivered">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6>Delivered</h6>
+                  <p>Order completed. Enjoy your delicious food!</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2">
+              <a href="#" class="btn btn-outline-secondary btn-sm w-50" id="invoice-btn" target="_blank" style="display: none;">
+                <i class="fa-solid fa-file-pdf me-1"></i>Download Invoice
+              </a>
+              <button class="btn btn-outline-secondary btn-sm w-50" id="refresh-btn">
+                <i class="fa-solid fa-arrows-rotate me-1"></i>Refresh Status
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty lookup screen -->
+          <div class="glass-card no-hover p-5 text-center text-muted" id="empty-state">
+            <i class="fa-solid fa-search fa-3x mb-3 text-muted"></i>
+            <h5>Track Order Status</h5>
+            <p class="small">Enter your Order ID from checkout or invoice to track live status.</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/theme.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = Components.navbar();
+    document.getElementById('footer').innerHTML = Components.footer();
+    Theme.init();
+    Cart.updateBadge();
+
+    const params = new URLSearchParams(window.location.search);
+    const urlOrderId = params.get('orderId');
+
+    const steps = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Packed', 'Out for Delivery', 'Delivered'];
+
+    async function trackOrder(orderId) {
+      if (!orderId) return;
+      Utils.showLoader(true);
+      try {
+        const res = await API.trackOrder(orderId);
+        const tracker = res.data;
+        
+        document.getElementById('empty-state').style.display = 'none';
+        const card = document.getElementById('tracker-card');
+        card.style.display = 'block';
+
+        document.getElementById('order-id-title').textContent = `Order ${tracker.orderId}`;
+        document.getElementById('current-status-badge').textContent = tracker.currentStatus;
+        
+        // Color update for current status badge
+        const badge = document.getElementById('current-status-badge');
+        badge.className = 'badge';
+        if (tracker.currentStatus === 'Delivered') badge.classList.add('bg-success');
+        else if (tracker.currentStatus === 'Cancelled') badge.classList.add('bg-danger');
+        else badge.classList.add('bg-primary');
+
+        if (tracker.estimatedDelivery) {
+          document.getElementById('est-delivery-time').textContent = Utils.formatDate(tracker.estimatedDelivery);
+        } else {
+          document.getElementById('est-delivery-time').textContent = '—';
+        }
+
+        // We can fetch details or fallback if payment method not present
+        document.getElementById('payment-method-text').textContent = tracker.paymentMethod || 'Online / COD';
+
+        // Load invoice button link
+        const invoiceBtn = document.getElementById('invoice-btn');
+        invoiceBtn.href = `${API.baseURL}/orders/${orderId}/invoice`;
+        invoiceBtn.style.display = 'inline-block';
+
+        // Update timeline status
+        const currentIndex = steps.indexOf(tracker.currentStatus);
+        
+        steps.forEach((step, index) => {
+          const itemEl = document.getElementById(`step-${step}`);
+          if (itemEl) {
+            itemEl.classList.remove('completed', 'active');
+            if (index < currentIndex) {
+              itemEl.classList.add('completed');
+            } else if (index === currentIndex) {
+              itemEl.classList.add('active');
+            }
+          }
+        });
+
+        // Set timeline line progress percentage
+        const progressPercent = currentIndex >= 0 ? (currentIndex / (steps.length - 1)) * 100 : 0;
+        document.getElementById('tracking-timeline').style.setProperty('--progress', `${progressPercent}%`);
+
+      } catch (err) {
+        Utils.showToast(err.message || 'Order not found', 'error');
+      } finally {
+        Utils.showLoader(false);
+      }
+    }
+
+    document.getElementById('track-btn').addEventListener('click', () => {
+      const orderId = document.getElementById('order-id-input').value.trim();
+      trackOrder(orderId);
+    });
+
+    document.getElementById('order-id-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const orderId = document.getElementById('order-id-input').value.trim();
+        trackOrder(orderId);
+      }
+    });
+
+    document.getElementById('refresh-btn').addEventListener('click', () => {
+      const orderId = document.getElementById('order-id-input').value.trim() || urlOrderId;
+      trackOrder(orderId);
+    });
+
+    if (urlOrderId) {
+      document.getElementById('order-id-input').value = urlOrderId;
+      trackOrder(urlOrderId);
+    }
+  </script>
+</body>
+</html>

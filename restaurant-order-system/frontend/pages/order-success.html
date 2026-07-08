@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Placed Successfully — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+  <style>
+    .success-page { min-height:100vh; display:flex; align-items:center; padding:6rem 0 4rem; }
+    .confetti-container { position:fixed; inset:0; pointer-events:none; z-index:9998; overflow:hidden; }
+    .cf { position:absolute; width:10px; height:10px; border-radius:2px; animation:cfFall linear forwards; }
+    @keyframes cfFall {
+      0%   { transform:translateY(-20px) rotate(0deg); opacity:1; }
+      100% { transform:translateY(110vh) rotate(720deg); opacity:0; }
+    }
+    .order-item-row { display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid var(--border); font-size:0.88rem; }
+    .order-item-row:last-child { border:none; }
+    @keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+    .animated { animation:fadeInUp 0.6s ease forwards; }
+    .animated:nth-child(2) { animation-delay:0.15s; }
+    .animated:nth-child(3) { animation-delay:0.3s; }
+    .animated:nth-child(4) { animation-delay:0.45s; }
+  </style>
+</head>
+<body>
+  <div id="navbar"></div>
+  <div class="confetti-container" id="confetti"></div>
+
+  <div class="success-page">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-7">
+
+          <div class="text-center animated">
+            <div class="success-checkmark mb-0">
+              <i class="fa-solid fa-check fa-3x text-white"></i>
+            </div>
+          </div>
+
+          <div class="glass-card no-hover p-4 p-md-5 mt-4 text-center animated">
+            <h2 class="fw-800 mb-1">Order Placed Successfully! 🎉</h2>
+            <p class="text-muted mb-3">Thank you for your order. We're preparing it now!</p>
+
+            <div class="order-number-badge" id="order-number">—</div>
+
+            <div class="row g-3 mt-3 mb-4">
+              <div class="col-4">
+                <div class="glass-card no-hover p-3" style="border-radius:12px">
+                  <i class="fa-regular fa-clock fa-lg mb-2 d-block" style="color:var(--primary)"></i>
+                  <div class="fw-700 small">Delivery In</div>
+                  <div class="text-muted" style="font-size:0.78rem">~45 minutes</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="glass-card no-hover p-3" style="border-radius:12px">
+                  <i class="fa-solid fa-truck-fast fa-lg mb-2 d-block" style="color:var(--secondary)"></i>
+                  <div class="fw-700 small">Status</div>
+                  <div class="text-muted" style="font-size:0.78rem">Pending</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="glass-card no-hover p-3" style="border-radius:12px">
+                  <i class="fa-solid fa-bell fa-lg mb-2 d-block" style="color:var(--accent)"></i>
+                  <div class="fw-700 small">Notification</div>
+                  <div class="text-muted" style="font-size:0.78rem">Via SMS/Email</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Items Summary -->
+          <div class="glass-card no-hover p-4 mt-3 animated">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-receipt me-2"></i>Order Details</h6>
+            <div id="order-items-list">
+              <p class="text-muted small">Loading...</p>
+            </div>
+            <hr style="border-color:var(--border)">
+            <div id="order-totals" class="text-muted small"></div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="glass-card no-hover p-4 mt-3 animated">
+            <div class="row g-2">
+              <div class="col-md-4">
+                <a href="track-order.html" class="btn btn-primary-custom w-100" id="track-btn">
+                  <i class="fa-solid fa-location-dot me-2"></i>Track Order
+                </a>
+              </div>
+              <div class="col-md-4">
+                <a href="#" class="btn w-100 fw-600" id="invoice-btn" target="_blank"
+                   style="background:rgba(46,196,182,0.12);color:var(--secondary);border:1.5px solid rgba(46,196,182,0.3);border-radius:50px">
+                  <i class="fa-solid fa-file-pdf me-2"></i>Download Invoice
+                </a>
+              </div>
+              <div class="col-md-4">
+                <a href="index.html" class="btn btn-outline-secondary w-100">
+                  <i class="fa-solid fa-house me-2"></i>Return Home
+                </a>
+              </div>
+            </div>
+            <div class="text-center mt-3">
+              <a href="menu.html" class="text-muted small">
+                <i class="fa-solid fa-utensils me-1"></i>Order more food
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/theme.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = Components.navbar();
+    Theme.init();
+    Cart.updateBadge();
+
+    // Confetti
+    function spawnConfetti() {
+      const colors = ['#ff6b35','#ffba08','#2ec4b6','#4361ee','#ff006e','#8338ec','#3a86ff'];
+      const container = document.getElementById('confetti');
+      for (let i = 0; i < 80; i++) {
+        const el = document.createElement('div');
+        el.className = 'cf';
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.top  = '-20px';
+        el.style.background = colors[Math.floor(Math.random() * colors.length)];
+        el.style.width  = (Math.random() * 10 + 6) + 'px';
+        el.style.height = (Math.random() * 10 + 6) + 'px';
+        el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        el.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        el.style.animationDelay = (Math.random() * 1.5) + 's';
+        container.appendChild(el);
+      }
+      setTimeout(() => container.innerHTML = '', 5000);
+    }
+
+    // Load order data
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('orderId');
+    const lastOrder = JSON.parse(sessionStorage.getItem('lastOrder') || 'null');
+
+    if (orderId) {
+      document.getElementById('order-number').textContent = orderId;
+      document.getElementById('track-btn').href = `track-order.html?orderId=${orderId}`;
+      document.getElementById('invoice-btn').href = `${API.baseURL}/orders/${orderId}/invoice`;
+
+      spawnConfetti();
+
+      if (lastOrder && lastOrder.totals) {
+        const t = lastOrder.totals;
+        document.getElementById('order-totals').innerHTML = `
+          <div class="d-flex justify-content-between"><span>Subtotal</span><span>${Utils.formatPrice(t.subtotal)}</span></div>
+          <div class="d-flex justify-content-between"><span>GST</span><span>${Utils.formatPrice(t.gstAmount)}</span></div>
+          <div class="d-flex justify-content-between"><span>Delivery</span><span>${t.deliveryCharge === 0 ? 'FREE' : Utils.formatPrice(t.deliveryCharge)}</span></div>
+          ${t.discountAmount > 0 ? `<div class="d-flex justify-content-between text-success"><span>Discount</span><span>−${Utils.formatPrice(t.discountAmount)}</span></div>` : ''}
+          <div class="d-flex justify-content-between fw-700 mt-1" style="font-size:1rem;color:var(--primary)"><span>Total Paid</span><span>${Utils.formatPrice(t.total)}</span></div>`;
+      }
+
+      // Try to load items from the order object
+      try {
+        API.getOrder(orderId).then(res => {
+          const order = res.data;
+          if (order && order.items) {
+            document.getElementById('order-items-list').innerHTML = order.items.map(item => `
+              <div class="order-item-row">
+                <span>${item.food_name} <span class="badge" style="background:var(--primary-light);color:var(--primary);border-radius:20px;font-size:0.7rem">${item.quantity}×</span></span>
+                <span class="fw-600">${Utils.formatPrice(item.total_price)}</span>
+              </div>`).join('');
+          }
+        }).catch(() => {
+          // If no auth, show from sessionStorage
+          if (lastOrder && lastOrder.order && lastOrder.order.items) {
+            document.getElementById('order-items-list').innerHTML = lastOrder.order.items.map(i => `
+              <div class="order-item-row">
+                <span>${i.food_name || i.name} <span class="badge" style="background:var(--primary-light);color:var(--primary);border-radius:20px;font-size:0.7rem">${i.quantity || i.qty}×</span></span>
+                <span class="fw-600">${Utils.formatPrice(i.total_price || (i.price * i.qty))}</span>
+              </div>`).join('');
+          } else {
+            document.getElementById('order-items-list').innerHTML = '<p class="text-muted small">Order details unavailable offline</p>';
+          }
+        });
+      } catch (e) {}
+    } else {
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>

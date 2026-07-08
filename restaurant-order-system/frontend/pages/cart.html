@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Cart — FoodHub</title>
+  <meta name="description" content="Review your cart items, apply coupons, and proceed to checkout.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <div class="page-header">
+    <div class="container">
+      <h1><i class="fa-solid fa-cart-shopping me-2"></i>Your Cart</h1>
+      <p>Review your items before placing the order</p>
+    </div>
+  </div>
+
+  <section class="py-5">
+    <div class="container">
+      <div class="row g-4">
+        <!-- Cart Items -->
+        <div class="col-lg-8">
+          <div class="glass-card no-hover mb-3" id="cart-items">
+            <div class="p-5 text-center">
+              <i class="fa-solid fa-cart-shopping fa-3x text-muted mb-3"></i>
+              <p class="text-muted">Your cart is empty</p>
+              <a href="menu.html" class="btn btn-primary-custom">Browse Menu</a>
+            </div>
+          </div>
+
+          <!-- Order Notes -->
+          <div class="glass-card no-hover p-4 mb-3" id="notes-section" style="display:none">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-note-sticky me-2"></i>Order Notes</h6>
+            <textarea class="form-control" id="order-notes" rows="2"
+              placeholder="Any special instructions? (e.g. extra spicy, no onions)"></textarea>
+          </div>
+
+          <!-- Save for Later -->
+          <div id="saved-section" class="saved-later-section" style="display:none">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-bookmark me-2"></i>Saved for Later</h6>
+            <div id="saved-items"></div>
+          </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+          <div class="glass-card no-hover cart-summary p-4">
+            <h5 class="mb-3 fw-bold">Order Summary</h5>
+
+            <!-- Coupon -->
+            <div class="mb-3">
+              <div class="input-group">
+                <input type="text" class="form-control" id="coupon-code"
+                       placeholder="Coupon code (e.g. WELCOME10)">
+                <button class="btn btn-outline-secondary fw-600" id="apply-coupon" style="border-radius:0 12px 12px 0 !important">
+                  Apply
+                </button>
+              </div>
+              <small id="coupon-msg" class="mt-1 d-block"></small>
+            </div>
+
+            <!-- Available coupons hint -->
+            <div class="mb-3 p-2 rounded-3" style="background:var(--primary-light);font-size:0.75rem">
+              <strong>Available:</strong>
+              <span class="coupon-hint ms-1" style="cursor:pointer;color:var(--primary)" onclick="applyCouponHint('WELCOME10')">WELCOME10</span> ·
+              <span class="coupon-hint" style="cursor:pointer;color:var(--primary)" onclick="applyCouponHint('FLAT50')">FLAT50</span> ·
+              <span class="coupon-hint" style="cursor:pointer;color:var(--primary)" onclick="applyCouponHint('FOOD20')">FOOD20</span>
+            </div>
+
+            <!-- Summary rows -->
+            <div class="summary-row"><span>Subtotal</span><span id="sum-subtotal">₹0.00</span></div>
+            <div class="summary-row"><span>GST (5%)</span><span id="sum-gst">₹0.00</span></div>
+            <div class="summary-row">
+              <span>Delivery</span>
+              <span id="sum-delivery">₹0.00</span>
+            </div>
+            <div class="summary-row text-success" id="discount-row" style="display:none">
+              <span><i class="fa-solid fa-tag me-1"></i>Discount</span>
+              <span id="sum-discount">-₹0.00</span>
+            </div>
+
+            <!-- Tip -->
+            <div class="mb-3 mt-2">
+              <label class="form-label small fw-600"><i class="fa-solid fa-hand-holding-heart me-1"></i>Tip for Delivery Partner</label>
+              <div class="d-flex gap-2 mb-2">
+                <button class="btn btn-sm tip-preset" data-tip="0"   style="border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);flex:1">₹0</button>
+                <button class="btn btn-sm tip-preset" data-tip="10"  style="border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);flex:1">₹10</button>
+                <button class="btn btn-sm tip-preset" data-tip="20"  style="border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);flex:1">₹20</button>
+                <button class="btn btn-sm tip-preset" data-tip="50"  style="border:1.5px solid var(--border);border-radius:8px;background:var(--bg-card);flex:1">₹50</button>
+              </div>
+              <input type="number" class="form-control" id="tip-amount" min="0" value="0" placeholder="Custom tip">
+            </div>
+
+            <div class="summary-row total"><span>Total</span><span id="sum-total">₹0.00</span></div>
+
+            <div class="text-muted small mb-3">
+              <i class="fa-solid fa-truck-fast me-1"></i>
+              <span id="delivery-note">Free delivery on orders above ₹400</span>
+            </div>
+
+            <div class="d-grid gap-2 mt-3">
+              <a href="checkout.html" class="btn btn-primary-custom btn-lg" id="checkout-btn" style="pointer-events:none;opacity:0.5">
+                <i class="fa-solid fa-lock me-2"></i>Proceed to Checkout
+              </a>
+              <a href="menu.html" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-arrow-left me-2"></i>Continue Shopping
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/theme.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = Components.navbar();
+    document.getElementById('footer').innerHTML = Components.footer();
+    Theme.init();
+    Cart.updateBadge();
+
+    let appliedCoupon = Cart.getCoupon();
+
+    function getImg(item) {
+      if (item.image) {
+        const base = API.baseURL.replace('/api', '');
+        return item.image.startsWith('http') ? item.image : base + item.image;
+      }
+      return Utils.getFoodImage({ id: item.id });
+    }
+
+    function renderCart() {
+      const items = Cart.getItems();
+      const container = document.getElementById('cart-items');
+      const notesSection = document.getElementById('notes-section');
+      const checkoutBtn = document.getElementById('checkout-btn');
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="p-5 text-center">
+            <i class="fa-solid fa-cart-shopping fa-3x text-muted mb-3 d-block"></i>
+            <h5>Your cart is empty</h5>
+            <p class="text-muted mb-4">Looks like you haven't added anything yet</p>
+            <a href="menu.html" class="btn btn-primary-custom">Browse Menu</a>
+          </div>`;
+        notesSection.style.display = 'none';
+        checkoutBtn.style.pointerEvents = 'none';
+        checkoutBtn.style.opacity = '0.5';
+      } else {
+        container.innerHTML = `
+          <div class="p-3 d-flex justify-content-between align-items-center border-bottom">
+            <h6 class="fw-bold mb-0">${items.length} item${items.length !== 1 ? 's' : ''} in cart</h6>
+            <button class="btn btn-sm text-danger" onclick="clearCartConfirm()" style="font-size:0.8rem">
+              <i class="fa-solid fa-trash me-1"></i>Clear All
+            </button>
+          </div>
+          ${items.map(item => `
+          <div class="cart-item" id="ci-${item.id}">
+            <img src="${getImg(item)}" alt="${item.name}"
+                 onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100'">
+            <div class="flex-grow-1">
+              <h6 class="fw-bold mb-1" style="font-size:0.9rem">${item.name}</h6>
+              <p class="text-muted mb-0 small">${Utils.formatPrice(item.price)} each</p>
+            </div>
+            <div class="qty-control">
+              <button onclick="Cart.updateQty(${item.id}, ${item.qty - 1}); renderCart()">−</button>
+              <span class="qty-num">${item.qty}</span>
+              <button onclick="Cart.updateQty(${item.id}, ${item.qty + 1}); renderCart()">+</button>
+            </div>
+            <strong class="ms-3" style="min-width:70px;text-align:right">${Utils.formatPrice(item.price * item.qty)}</strong>
+            <div class="d-flex flex-column gap-1 ms-2">
+              <button class="btn btn-link text-danger p-0" style="font-size:0.8rem" onclick="Cart.removeItem(${item.id}); renderCart()">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+              <button class="btn btn-link text-muted p-0" style="font-size:0.75rem" onclick="Cart.saveForLater(${item.id}); renderCart(); renderSaved()" title="Save for later">
+                <i class="fa-regular fa-bookmark"></i>
+              </button>
+            </div>
+          </div>`).join('')}`;
+
+        notesSection.style.display = 'block';
+        checkoutBtn.style.pointerEvents = 'auto';
+        checkoutBtn.style.opacity = '1';
+      }
+
+      updateSummary();
+    }
+
+    function renderSaved() {
+      const saved = Cart.getSavedItems();
+      const section = document.getElementById('saved-section');
+      const container = document.getElementById('saved-items');
+      if (saved.length === 0) { section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      container.innerHTML = saved.map(item => `
+        <div class="saved-item-chip">
+          <img src="${getImg(item)}" alt="${item.name}"
+               onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=60'">
+          <div class="flex-grow-1">
+            <div class="fw-600" style="font-size:0.88rem">${item.name}</div>
+            <div class="text-muted" style="font-size:0.78rem">${Utils.formatPrice(item.price)}</div>
+          </div>
+          <button class="btn btn-sm btn-primary-custom" onclick="Cart.moveToCart(${item.id}); renderCart(); renderSaved()" style="font-size:0.75rem;padding:0.3rem 0.8rem">
+            Move to Cart
+          </button>
+          <button class="btn btn-sm text-danger" onclick="Cart.removeSaved(${item.id}); renderSaved()" style="font-size:0.75rem">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>`).join('');
+    }
+
+    function updateSummary() {
+      const tip = parseFloat(document.getElementById('tip-amount').value) || 0;
+      const totals = Cart.calculateTotals(appliedCoupon, tip);
+      document.getElementById('sum-subtotal').textContent = Utils.formatPrice(totals.subtotal);
+      document.getElementById('sum-gst').textContent = Utils.formatPrice(totals.gst);
+      document.getElementById('sum-delivery').textContent =
+        totals.delivery === 0 ? '<span class="text-success fw-600">FREE</span>' : Utils.formatPrice(totals.delivery);
+      document.getElementById('sum-total').textContent = Utils.formatPrice(totals.total);
+
+      const discountRow = document.getElementById('discount-row');
+      if (totals.discount > 0) {
+        discountRow.style.display = 'flex';
+        document.getElementById('sum-discount').textContent = '−' + Utils.formatPrice(totals.discount);
+      } else {
+        discountRow.style.display = 'none';
+      }
+
+      // Delivery note
+      const remaining = 400 - totals.subtotal;
+      document.getElementById('delivery-note').textContent =
+        remaining > 0 && totals.subtotal > 0
+          ? `Add ${Utils.formatPrice(remaining)} more for free delivery`
+          : remaining <= 0
+          ? '🎉 You have free delivery!'
+          : 'Free delivery on orders above ₹400';
+    }
+
+    function applyCouponHint(code) {
+      document.getElementById('coupon-code').value = code;
+    }
+
+    async function applyCoupon() {
+      const code = document.getElementById('coupon-code').value.trim().toUpperCase();
+      if (!code) return;
+      const msgEl = document.getElementById('coupon-msg');
+      msgEl.textContent = 'Validating…';
+      msgEl.className = 'mt-1 d-block text-muted';
+      try {
+        const res = await API.validateCoupon(code, Cart.getSubtotal());
+        if (res.valid) {
+          appliedCoupon = res.coupon;
+          Cart.setCoupon(res.coupon);
+          msgEl.textContent = '✅ Coupon applied successfully!';
+          msgEl.className = 'mt-1 d-block text-success fw-600';
+          updateSummary();
+        } else {
+          msgEl.textContent = '❌ ' + res.message;
+          msgEl.className = 'mt-1 d-block text-danger';
+          appliedCoupon = null;
+          Cart.clearCoupon();
+        }
+      } catch (e) {
+        // Graceful fallback for local dev without backend
+        msgEl.textContent = '⚠️ Could not validate (backend offline)';
+        msgEl.className = 'mt-1 d-block text-warning';
+      }
+    }
+
+    async function clearCartConfirm() {
+      const result = await Utils.showConfirm('Clear Cart?', 'All items will be removed.', 'Yes, clear it');
+      if (result.isConfirmed) {
+        Cart.clear();
+        renderCart();
+      }
+    }
+
+    // Tip presets
+    document.querySelectorAll('.tip-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tip-preset').forEach(b => {
+          b.style.background = 'var(--bg-card)';
+          b.style.color = 'var(--text)';
+        });
+        btn.style.background = 'var(--primary)';
+        btn.style.color = '#fff';
+        document.getElementById('tip-amount').value = btn.dataset.tip;
+        updateSummary();
+      });
+    });
+
+    document.getElementById('apply-coupon').addEventListener('click', applyCoupon);
+    document.getElementById('coupon-code').addEventListener('keydown', e => {
+      if (e.key === 'Enter') applyCoupon();
+    });
+    document.getElementById('tip-amount').addEventListener('input', updateSummary);
+
+    // Persist notes to sessionStorage for checkout
+    document.getElementById('order-notes').addEventListener('input', e => {
+      sessionStorage.setItem('order_notes', e.target.value);
+    });
+    const savedNotes = sessionStorage.getItem('order_notes');
+    if (savedNotes) document.getElementById('order-notes').value = savedNotes;
+
+    // Show existing coupon if any
+    if (appliedCoupon) {
+      document.getElementById('coupon-code').value = appliedCoupon.code || '';
+      document.getElementById('coupon-msg').textContent = '✅ Coupon applied';
+      document.getElementById('coupon-msg').className = 'mt-1 d-block text-success fw-600';
+    }
+
+    window.addEventListener('cartUpdated', renderCart);
+    window.addEventListener('savedUpdated', renderSaved);
+    renderCart();
+    renderSaved();
+  </script>
+</body>
+</html>
