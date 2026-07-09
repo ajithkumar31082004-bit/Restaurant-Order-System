@@ -32,7 +32,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: [config.frontendUrl, 'http://127.0.0.1:5500', 'http://localhost:5500', 'null'],
+  origin: [config.frontendUrl, 'http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000', 'http://127.0.0.1:3000', 'null'],
   credentials: true
 }));
 app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
@@ -79,6 +79,27 @@ app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ success: false, message: 'API endpoint not found' });
   }
+  
+  // Clean URL mapping for frontend routes
+  const cleanPath = req.path.replace(/\/$/, ''); // Remove trailing slash
+  const pageMap = {
+    '/menu': '../frontend/pages/menu.html',
+    '/login': '../frontend/pages/login.html',
+    '/register': '../frontend/pages/register.html',
+    '/cart': '../frontend/pages/cart.html',
+    '/checkout': '../frontend/pages/checkout.html',
+    '/profile': '../frontend/pages/profile.html',
+    '/track-order': '../frontend/pages/track-order.html',
+    '/contact': '../frontend/pages/contact.html',
+    '/order-success': '../frontend/pages/order-success.html',
+    '/admin': '../frontend/pages/admin/dashboard.html',
+    '/admin/dashboard': '../frontend/pages/admin/dashboard.html'
+  };
+
+  if (pageMap[cleanPath]) {
+    return res.sendFile(path.join(__dirname, pageMap[cleanPath]));
+  }
+
   res.sendFile(path.join(__dirname, '../frontend/pages/index.html'));
 });
 
