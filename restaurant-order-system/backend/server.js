@@ -97,10 +97,15 @@ app.use((req, res) => {
   };
 
   if (pageMap[cleanPath]) {
-    return res.sendFile(path.join(__dirname, pageMap[cleanPath]));
+    return res.redirect(pageMap[cleanPath]);
   }
 
-  res.sendFile(path.join(__dirname, '../frontend/pages/index.html'));
+  // Default: redirect root to the main page
+  if (cleanPath === '' || cleanPath === '/') {
+    return res.redirect('/pages/index.html');
+  }
+
+  res.redirect('/pages/index.html');
 });
 
 // ── Crash Protection ──────────────────────────────────────────
