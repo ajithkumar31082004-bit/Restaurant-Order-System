@@ -1,0 +1,10 @@
+{
+  "name": "restaurant-order-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function to process restaurant orders from SQS to DynamoDB",
+  "main": "lambda_function.js",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.700.0",
+    "@aws-sdk/lib-dynamodb": "^3.700.0"
+  }
+}
