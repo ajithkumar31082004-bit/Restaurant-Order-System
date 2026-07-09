@@ -19,7 +19,7 @@ const adminController = {
       const page = parseInt(req.query.page, 10) || 1;
       const limit = parseInt(req.query.limit, 10) || 20;
       const result = await User.getAll(page, limit);
-      res.json({ success: true, data: result });
+      res.json({ success: true, data: result.users });
     } catch (error) {
       next(error);
     }

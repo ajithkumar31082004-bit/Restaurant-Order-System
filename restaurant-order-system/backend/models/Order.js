@@ -33,7 +33,7 @@ const Order = {
       for (const item of items) {
         await connection.execute(
           'INSERT INTO order_items (order_id, food_id, food_name, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?, ?)',
-          [orderDbId, item.foodId, item.name, item.qty, item.price, item.qty * item.price]
+          [orderDbId, item.foodId || item.id || null, item.name, item.qty, item.price, item.qty * item.price]
         );
       }
 

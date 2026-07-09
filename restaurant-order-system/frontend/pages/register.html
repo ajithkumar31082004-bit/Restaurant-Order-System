@@ -79,7 +79,10 @@
                   <span class="input-group-text" style="background: var(--bg-card); border: 1.5px solid var(--border); border-right: none; border-radius: 12px 0 0 12px;">
                     <i class="fa-solid fa-circle-check text-muted"></i>
                   </span>
-                  <input type="password" class="form-control" id="confirm-password" required placeholder="••••••••" style="border-radius: 0 12px 12px 0 !important;">
+                  <input type="password" class="form-control" id="confirm-password" required placeholder="••••••••" style="border-radius: 0 !important;">
+                  <button class="btn btn-outline-secondary" type="button" id="toggle-confirm-pwd" style="border-radius: 0 12px 12px 0 !important; border: 1.5px solid var(--border); border-left: none;">
+                    <i class="fa-solid fa-eye-slash" id="confirm-pwd-icon"></i>
+                  </button>
                 </div>
               </div>
 
@@ -125,6 +128,21 @@
       } else {
         pwdInput.type = 'password';
         icon.className = 'fa-solid fa-eye-slash';
+      }
+    });
+
+    // Show/hide confirm password
+    const confirmPwdInput = document.getElementById('confirm-password');
+    const toggleConfirmBtn = document.getElementById('toggle-confirm-pwd');
+    const confirmIcon = document.getElementById('confirm-pwd-icon');
+
+    toggleConfirmBtn.addEventListener('click', () => {
+      if (confirmPwdInput.type === 'password') {
+        confirmPwdInput.type = 'text';
+        confirmIcon.className = 'fa-solid fa-eye';
+      } else {
+        confirmPwdInput.type = 'password';
+        confirmIcon.className = 'fa-solid fa-eye-slash';
       }
     });
 
@@ -198,7 +216,7 @@
         Utils.showToast('Account created successfully! Please login.', 'success');
         
         setTimeout(() => {
-          window.location.href = 'login.html';
+          window.location.href = '/login';
         }, 1500);
 
       } catch (err) {

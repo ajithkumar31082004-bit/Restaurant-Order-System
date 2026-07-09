@@ -114,7 +114,7 @@
 
     // Redirect handler
     const params = new URLSearchParams(window.location.search);
-    const redirectUrl = params.get('redirect') || 'index.html';
+    const redirectUrl = params.get('redirect') || '/';
 
     // Show/hide password logic
     const pwdInput = document.getElementById('password');
@@ -162,13 +162,20 @@
       Utils.showLoader(true);
       try {
         const res = await API.login({ email, password });
-        localStorage.setItem('token', res.token);
-        localStorage.setItem('user', JSON.stringify(res.user));
+        // Backend returns { success, data: { user, token } }
+        const { token, user } = res.data;
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
         
         Utils.showToast('Logged in successfully! Welcome back.', 'success');
         
         setTimeout(() => {
-          window.location.href = redirectUrl;
+          // Redirect admin to admin dashboard, others to requested page
+          if (user.role === 'admin' && redirectUrl === '/') {
+            window.location.href = '/pages/admin/dashboard.html';
+          } else {
+            window.location.href = redirectUrl;
+          }
         }, 1200);
 
       } catch (err) {

@@ -107,11 +107,10 @@ const Utils = {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    const base = window.location.pathname.includes('/admin/') ? '../' : '';
-    window.location.href = base + 'login.html';
+    window.location.href = '/login';
   },
 
-  requireAuth(redirect = 'login.html') {
+  requireAuth(redirect = '/login') {
     if (!this.isLoggedIn()) {
       window.location.href = redirect + '?redirect=' + encodeURIComponent(window.location.pathname);
       return false;
