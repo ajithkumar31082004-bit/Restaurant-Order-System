@@ -107,11 +107,13 @@
   <script src="../js/components.js"></script>
   <script src="../js/theme.js"></script>
   <script>
-    document.getElementById('navbar').innerHTML = Components.navbar('menu');
-    document.getElementById('footer').innerHTML = Components.footer();
     AOS.init({ duration: 800, once: true });
-    Theme.init();
-    Cart.updateBadge();
+    try {
+      document.getElementById('navbar').innerHTML = Components.navbar('menu');
+      document.getElementById('footer').innerHTML = Components.footer();
+    } catch(e) { console.warn('Components init failed:', e); }
+    try { Theme.init(); } catch(e) {}
+    try { Cart.updateBadge(); } catch(e) {}
 
     let activeFilters = {};
     const params = new URLSearchParams(window.location.search);

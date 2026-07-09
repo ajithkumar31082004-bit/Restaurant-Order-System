@@ -364,13 +364,20 @@
   <script src="../js/components.js"></script>
   <script src="../js/theme.js"></script>
   <script>
-    // Init
-    document.getElementById('promo-bar').innerHTML = Components.promoBar();
-    document.getElementById('navbar').innerHTML = Components.navbar('home');
-    document.getElementById('footer').innerHTML = Components.footer();
+    // Always initialize AOS first — keeps page visible even if other scripts fail
     AOS.init({ duration: 800, once: true, offset: 50 });
-    Theme.init();
-    Cart.updateBadge();
+
+    // Init shared components
+    try {
+      document.getElementById('promo-bar').innerHTML = Components.promoBar();
+      document.getElementById('navbar').innerHTML = Components.navbar('home');
+      document.getElementById('footer').innerHTML = Components.footer();
+    } catch (e) {
+      console.warn('Components init failed:', e);
+    }
+
+    try { Theme.init(); } catch (e) {}
+    try { Cart.updateBadge(); } catch (e) {}
 
     async function loadHome() {
       try {
@@ -408,6 +415,9 @@
         render('popular-foods',    f => f.is_featured);
         render('bestseller-foods', f => f.is_bestseller);
         render('combo-foods',      f => f.category_name === 'Combos' || f.category_id === 8);
+
+        // Re-init AOS for dynamically added elements
+        AOS.refresh();
 
       } catch (e) {
         console.error('Home load error:', e);
