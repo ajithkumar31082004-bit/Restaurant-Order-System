@@ -374,7 +374,7 @@ Click **Add security group rule** for each:
 |------|----------|------|--------|
 | SSH | TCP | 22 | My IP |
 | HTTP | TCP | 80 | Anywhere (0.0.0.0/0) |
-| Custom TCP | TCP | 5000 | Anywhere (0.0.0.0/0) |
+| Custom TCP *(Optional)* | TCP | 5000 | Anywhere (0.0.0.0/0) *(Only needed if testing without Nginx)* |
 
 ### 7.5 — Storage
 
@@ -762,6 +762,87 @@ sudo env PATH=$PATH:/home/ec2-user/.nvm/versions/node/v20.x.x/bin ...
 
 ---
 
+## STEP 16B — Install & Configure Nginx Reverse Proxy
+
+Instead of accessing your Node.js application directly on port `5000` (which is insecure and requires adding port `:5000` in the URL), configure **Nginx** as a reverse proxy to route traffic from standard port `80` (HTTP) to your application.
+
+### 16B.1 — Install Nginx
+On your EC2 instance (Amazon Linux 2023):
+```bash
+sudo dnf install -y nginx
+```
+*(If you are using an older Amazon Linux 2 version, use `sudo amazon-linux-extras install nginx1 -y` or `sudo yum install nginx -y`)*
+
+### 16B.2 — Create the FoodHub Nginx Config
+Create a custom configuration file for your website:
+```bash
+sudo nano /etc/nginx/conf.d/foodhub.conf
+```
+
+Paste the following configuration:
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    # Reverse proxy requests to Node.js backend running on port 5000
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+*(Save and exit nano: Press `Ctrl+O`, `Enter`, then `Ctrl+X`)*
+
+### 16B.3 — Disable Default Server Block (If needed)
+Amazon Linux default Nginx config includes a default server block that might conflict with our custom rule. Open `/etc/nginx/nginx.conf`:
+```bash
+sudo nano /etc/nginx/nginx.conf
+```
+Scroll down to the `server { ... }` block inside `http { ... }`, and comment out (add `#` at the beginning of each line) or delete that server block so Nginx uses our custom configuration in `/etc/nginx/conf.d/foodhub.conf`. 
+
+It should look like this after commenting out:
+```nginx
+#    server {
+#        listen       80;
+#        listen       [::]:80;
+#        server_name  _;
+#        root         /usr/share/nginx/html;
+#
+#        # Load configuration files for the default server block.
+#        include /etc/nginx/default.d/*.conf;
+#
+#        error_page 404 /404.html;
+#        location = /404.html {
+#        }
+#
+#        error_page 500 502 503 504 /50x.html;
+#        location = /50x.html {
+#        }
+#    }
+```
+*(Save and exit nano: Press `Ctrl+O`, `Enter`, then `Ctrl+X`)*
+
+### 16B.4 — Start and Enable Nginx
+Start the Nginx service and configure it to run on system boot:
+```bash
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+### 16B.5 — Test Nginx Configuration
+Verify there are no syntax errors in Nginx config:
+```bash
+sudo nginx -t
+# Expected: nginx: configuration file /etc/nginx/nginx.conf test is successful
+```
+
+---
+
 ## ═══════════════════════════════════
 ## PHASE 3 — VERIFY EVERYTHING WORKS
 ## ═══════════════════════════════════
@@ -772,10 +853,10 @@ sudo env PATH=$PATH:/home/ec2-user/.nvm/versions/node/v20.x.x/bin ...
 
 Open your browser and visit:
 ```
-http://54.123.45.67:5000
+http://54.123.45.67
 ```
 
-Replace with your EC2 IP.
+Replace with your EC2 Public IP (you do not need the `:5000` port suffix anymore!).
 
 **Checklist:**
 - [ ] Homepage loads with food items
@@ -786,7 +867,7 @@ Replace with your EC2 IP.
 
 ## STEP 18 — Log in as Admin
 
-1. Go to `http://54.123.45.67:5000/login`
+1. Go to `http://54.123.45.67/pages/login.html`
 2. Email: `admin@restaurant.com`
 3. Password: `Admin@123`
 4. Should redirect to admin dashboard
@@ -859,7 +940,7 @@ Replace with your EC2 IP.
 | Lambda Runtime | Node.js 20.x |
 | EC2 Instance | `restaurant-server` |
 | EC2 Type | t2.micro |
-| EC2 Port | 5000 |
+| EC2 Port | `80` (HTTP via Nginx Proxy to Node 5000) |
 | RDS Instance | `restaurant-db` |
 | RDS Database | `restaurant_db` |
 | RDS Username | `admin` |
@@ -876,7 +957,7 @@ Replace with your EC2 IP.
 | `SQS send failed` | Wrong SQS URL or missing credentials | Check `SQS_QUEUE_URL` and `AWS_ACCESS_KEY_ID` in `.env` |
 | `Lambda not triggering` | SQS trigger not added to Lambda | Go to Lambda → Configuration → Triggers → Add SQS |
 | `DynamoDB access denied` | Lambda role missing DynamoDB permission | Add `AmazonDynamoDBFullAccess` to Lambda execution role |
-| `Port 5000 refused` | EC2 Security Group missing port 5000 rule | Add inbound TCP 5000 from 0.0.0.0/0 |
+| `Port 80/5000 refused` | EC2 Security Group missing HTTP port 80 rule or Nginx stopped | Add inbound HTTP 80 rule on EC2 or run `sudo systemctl start nginx` |
 | `SSH permission denied` | .pem file wrong permissions | Run `icacls` command from Step 9.1 |
 | `Images not loading` | S3 bucket policy missing | Add the public bucket policy from Step 5.5 |
 | `pm2 restart after reboot failed` | Startup script not run | Run `pm2 startup` and execute the output command |

@@ -25,8 +25,9 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.googleapis.com"],
       fontSrc: ["'self'", "cdnjs.cloudflare.com", "fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "images.unsplash.com", "http://localhost:5000", "http://127.0.0.1:5000"],
-      connectSrc: ["'self'", "http://localhost:5000", "http://127.0.0.1:5000"]
+      imgSrc: ["'self'", "data:", "images.unsplash.com", "*.amazonaws.com", "http://localhost:5000", "http://127.0.0.1:5000"],
+      connectSrc: ["'self'", "http://localhost:5000", "http://127.0.0.1:5000"],
+      upgradeInsecureRequests: null
     }
   }
 }));
