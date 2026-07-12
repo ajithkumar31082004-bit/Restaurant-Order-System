@@ -6,7 +6,7 @@ const Admin = {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
     if (!token || !user) {
-      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      window.location.href = '/pages/login.html?redirect=' + encodeURIComponent(window.location.pathname);
       return false;
     }
     const parsed = JSON.parse(user);
@@ -26,7 +26,7 @@ const Admin = {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    window.location.href = '/pages/login.html';
   },
 
   layout(activePage, content) {
