@@ -40,4 +40,16 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, optionalAuth, adminMiddleware };
+// Generic role guard — accepts multiple allowed roles
+// Usage: roleMiddleware('admin','manager')  or  roleMiddleware('chef')
+const roleMiddleware = (...allowedRoles) => (req, res, next) => {
+  if (!req.user || !allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: `Access denied. Requires one of: ${allowedRoles.join(', ')}`
+    });
+  }
+  next();
+};
+
+module.exports = { authMiddleware, optionalAuth, adminMiddleware, roleMiddleware };

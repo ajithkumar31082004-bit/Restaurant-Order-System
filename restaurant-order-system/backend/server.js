@@ -7,13 +7,22 @@ const path = require('path');
 const config = require('./config/config');
 const errorHandler = require('./middleware/errorHandler');
 
-const authRoutes = require('./routes/authRoutes');
-const foodRoutes = require('./routes/foodRoutes');
-const categoryRoutes = require('./routes/categoryRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const couponRoutes = require('./routes/couponRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const userRoutes = require('./routes/userRoutes');
+const authRoutes        = require('./routes/authRoutes');
+const foodRoutes        = require('./routes/foodRoutes');
+const categoryRoutes    = require('./routes/categoryRoutes');
+const orderRoutes       = require('./routes/orderRoutes');
+const couponRoutes      = require('./routes/couponRoutes');
+const adminRoutes       = require('./routes/adminRoutes');
+const userRoutes        = require('./routes/userRoutes');
+// New v2 routes
+const reservationRoutes = require('./routes/reservationRoutes');
+const tableRoutes       = require('./routes/tableRoutes');
+const kitchenRoutes     = require('./routes/kitchenRoutes');
+const waiterRoutes      = require('./routes/waiterRoutes');
+const inventoryRoutes   = require('./routes/inventoryRoutes');
+const analyticsRoutes   = require('./routes/analyticsRoutes');
+const cashierRoutes     = require('./routes/cashierRoutes');
+const aiRoutes          = require('./routes/aiRoutes');
 
 const app = express();
 
@@ -43,6 +52,8 @@ app.use(express.urlencoded({ extended: true }));
 const limiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.max,
+  // Skip rate limiting for localhost (test scripts, dev tools)
+  skip: (req) => req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1',
   message: { success: false, message: 'Too many requests, please try again later.' }
 });
 app.use('/api/', limiter);
@@ -53,26 +64,43 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 app.get('/api', (req, res) => {
   res.json({
     success: true,
-    message: 'Restaurant Order System API',
-    version: '1.0.0',
+    message: 'FoodHub — Smart Restaurant Management API',
+    version: '2.0.0',
     endpoints: {
       auth: '/api/auth',
       foods: '/api/foods',
       categories: '/api/categories',
       orders: '/api/orders',
       coupons: '/api/coupons',
-      admin: '/api/admin'
+      admin: '/api/admin',
+      reservations: '/api/reservations',
+      tables: '/api/tables',
+      kitchen: '/api/kitchen',
+      waiter: '/api/waiter',
+      inventory: '/api/inventory',
+      analytics: '/api/analytics',
+      cashier: '/api/cashier',
+      ai: '/api/ai'
     }
   });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/foods', foodRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/coupons', couponRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/auth',         authRoutes);
+app.use('/api/foods',        foodRoutes);
+app.use('/api/categories',   categoryRoutes);
+app.use('/api/orders',       orderRoutes);
+app.use('/api/coupons',      couponRoutes);
+app.use('/api/admin',        adminRoutes);
+app.use('/api/users',        userRoutes);
+// v2 routes
+app.use('/api/reservations', reservationRoutes);
+app.use('/api/tables',       tableRoutes);
+app.use('/api/kitchen',      kitchenRoutes);
+app.use('/api/waiter',       waiterRoutes);
+app.use('/api/inventory',    inventoryRoutes);
+app.use('/api/analytics',    analyticsRoutes);
+app.use('/api/cashier',      cashierRoutes);
+app.use('/api/ai',           aiRoutes);
 
 app.use(errorHandler);
 
@@ -84,17 +112,40 @@ app.use((req, res) => {
   // Clean URL mapping for frontend routes
   const cleanPath = req.path.replace(/\/$/, ''); // Remove trailing slash
   const pageMap = {
-    '/menu': '../frontend/pages/menu.html',
-    '/login': '../frontend/pages/login.html',
-    '/register': '../frontend/pages/register.html',
-    '/cart': '../frontend/pages/cart.html',
-    '/checkout': '../frontend/pages/checkout.html',
-    '/profile': '../frontend/pages/profile.html',
-    '/track-order': '../frontend/pages/track-order.html',
-    '/contact': '../frontend/pages/contact.html',
-    '/order-success': '../frontend/pages/order-success.html',
-    '/admin': '../frontend/pages/admin/dashboard.html',
-    '/admin/dashboard': '../frontend/pages/admin/dashboard.html'
+    // Existing pages
+    '/menu':            '../frontend/pages/menu.html',
+    '/login':           '../frontend/pages/login.html',
+    '/register':        '../frontend/pages/register.html',
+    '/cart':            '../frontend/pages/cart.html',
+    '/checkout':        '../frontend/pages/checkout.html',
+    '/profile':         '../frontend/pages/profile.html',
+    '/track-order':     '../frontend/pages/track-order.html',
+    '/contact':         '../frontend/pages/contact.html',
+    '/order-success':   '../frontend/pages/order-success.html',
+    // New customer pages
+    '/reservation':     '../frontend/pages/reservation.html',
+    '/reservation-confirm': '../frontend/pages/reservation-confirm.html',
+    '/table-order':     '../frontend/pages/table-order.html',
+    '/bill':            '../frontend/pages/bill.html',
+    '/feedback':        '../frontend/pages/feedback.html',
+    '/loyalty':         '../frontend/pages/loyalty.html',
+    '/group-order':     '../frontend/pages/group-order.html',
+    '/scheduled-order': '../frontend/pages/scheduled-order.html',
+    // Admin pages
+    '/admin':                   '../frontend/pages/admin/dashboard.html',
+    '/admin/dashboard':         '../frontend/pages/admin/dashboard.html',
+    '/admin/floor-map':         '../frontend/pages/admin/floor-map.html',
+    '/admin/tables':            '../frontend/pages/admin/tables.html',
+    '/admin/reservations':      '../frontend/pages/admin/reservations.html',
+    '/admin/kitchen':           '../frontend/pages/admin/kitchen.html',
+    '/admin/waiter':            '../frontend/pages/admin/waiter.html',
+    '/admin/cashier':           '../frontend/pages/admin/cashier.html',
+    '/admin/inventory':         '../frontend/pages/admin/inventory.html',
+    '/admin/analytics':         '../frontend/pages/admin/analytics.html',
+    '/admin/employees':         '../frontend/pages/admin/employees.html',
+    '/admin/feedback':          '../frontend/pages/admin/feedback.html',
+    '/admin/waitlist':          '../frontend/pages/admin/waitlist.html',
+    '/admin/ai-insights':       '../frontend/pages/admin/ai-insights.html',
   };
 
   if (pageMap[cleanPath]) {
