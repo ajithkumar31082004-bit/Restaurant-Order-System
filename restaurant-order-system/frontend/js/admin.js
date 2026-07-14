@@ -6,13 +6,13 @@ const Admin = {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
     if (!token || !user) {
-      window.location.href = '/pages/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+      window.location.href = '../login.html?redirect=' + encodeURIComponent(window.location.pathname);
       return false;
     }
     const parsed = JSON.parse(user);
     if (parsed.role !== 'admin') {
       alert('Access denied. Admin only area.');
-      window.location.href = '/';
+      window.location.href = '../index.html';
       return false;
     }
     return true;
@@ -26,7 +26,11 @@ const Admin = {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/pages/login.html';
+    if (window.location.pathname.includes('/admin/')) {
+      window.location.href = '../login.html';
+    } else {
+      window.location.href = 'login.html';
+    }
   },
 
   layout(activePage, content) {
