@@ -117,7 +117,9 @@
   <script src="../js/components.js"></script>
   <script src="../js/theme.js"></script>
   <script>
-    AOS.init({ duration: 800, once: true });
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ duration: 800, once: true });
+    }
     try {
       document.getElementById('navbar').innerHTML = Components.navbar('menu');
       document.getElementById('footer').innerHTML = Components.footer();
@@ -172,7 +174,9 @@
         }
 
         grid.innerHTML = foods.map(f => Components.foodCard(f)).join('');
-        AOS.refreshHard();
+        if (typeof AOS !== 'undefined') {
+          AOS.refreshHard();
+        }
 
         // Mark active filters
         document.querySelectorAll('.filter-chip').forEach(chip => {

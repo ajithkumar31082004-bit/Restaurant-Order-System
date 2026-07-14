@@ -365,7 +365,9 @@
   <script src="../js/theme.js"></script>
   <script>
     // Always initialize AOS first — keeps page visible even if other scripts fail
-    AOS.init({ duration: 800, once: true, offset: 50 });
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ duration: 800, once: true, offset: 50 });
+    }
 
     // Init shared components
     try {
@@ -417,7 +419,9 @@
         render('combo-foods',      f => f.category_name === 'Combos' || f.category_id === 8);
 
         // Re-init AOS for dynamically added elements
-        AOS.refresh();
+        if (typeof AOS !== 'undefined') {
+          AOS.refresh();
+        }
 
       } catch (e) {
         console.error('Home load error:', e);

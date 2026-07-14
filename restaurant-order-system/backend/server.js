@@ -30,12 +30,12 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.googleapis.com"],
-      fontSrc: ["'self'", "cdnjs.cloudflare.com", "fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "images.unsplash.com", "*.amazonaws.com", "http://localhost:5000", "http://127.0.0.1:5000"],
-      connectSrc: ["'self'", "http://localhost:5000", "http://127.0.0.1:5000"],
+      defaultSrc: ["'self'", "http:", "https:", "data:", "blob:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://translate.google.com", "https://translate.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://translate.googleapis.com", "https://www.gstatic.com"],
+      fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com", "https://*.amazonaws.com", "https://translate.google.com", "https://translate.googleapis.com", "https://www.gstatic.com", "http://localhost:5000", "http://127.0.0.1:5000"],
+      connectSrc: ["'self'", "https://translate.googleapis.com", "http://localhost:5000", "http://127.0.0.1:5000", "ws://localhost:5000", "ws://127.0.0.1:5000", "wss://*"],
       upgradeInsecureRequests: null
     }
   }

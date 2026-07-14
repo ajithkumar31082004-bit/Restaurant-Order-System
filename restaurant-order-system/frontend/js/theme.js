@@ -121,3 +121,51 @@ window.adjustFontSize = function() {
 };
 
 window.Theme = Theme;
+
+// Chatbot UI Toggle & Message Handling (Safe from innerHTML script locks)
+window.toggleChatbot = function() {
+  const win = document.getElementById('aiChatbotWindow');
+  if (!win) return;
+  if (win.style.display === 'none' || win.style.display === '') {
+    win.style.display = 'flex';
+    const container = document.getElementById('aiChatbotMsgs');
+    if (container) container.scrollTop = container.scrollHeight;
+  } else {
+    win.style.display = 'none';
+  }
+};
+
+let botMsgCounter = 0;
+window.sendChatMsg = async function() {
+  const input = document.getElementById('aiChatbotInputText');
+  if (!input) return;
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  appendLocalMsg('user', msg);
+
+  // Show typing loader
+  const loaderId = appendLocalMsg('bot', '<span class="spinner-border spinner-border-sm me-1"></span>typing...');
+
+  try {
+    const res = await API.sendChatMessage(msg);
+    const reply = res.data.reply;
+    document.getElementById(loaderId).innerHTML = reply;
+  } catch (err) {
+    document.getElementById(loaderId).textContent = "I'm offline. How can I help you manually?";
+  }
+};
+
+function appendLocalMsg(sender, text) {
+  const container = document.getElementById('aiChatbotMsgs');
+  if (!container) return null;
+  const id = 'aimsg-local-' + (botMsgCounter++);
+  const el = document.createElement('div');
+  el.className = 'ai-msg ' + sender;
+  el.id = id;
+  el.innerHTML = text;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
