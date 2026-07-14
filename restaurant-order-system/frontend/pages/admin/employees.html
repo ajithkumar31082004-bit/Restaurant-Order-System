@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Management — FoodHub Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="admin-layout"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../../js/api.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/admin.js"></script>
+  <script>
+    if (!Admin.requireAdmin()) throw new Error('Unauthorized');
+
+    document.getElementById('admin-layout').innerHTML = Admin.layout('employees', `
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="mb-0 fw-bold">Employee Directory & Shifts</h4>
+          <p class="text-muted small mb-0">Manage chefs, waiters, cashiers, and view shifts</p>
+        </div>
+      </div>
+
+      <!-- Employee Grid -->
+      <div class="glass-card no-hover p-4">
+        <div class="table-responsive hide-scroll">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Employee Name</th>
+                <th>Role</th>
+                <th>Shift Type</th>
+                <th>Daily Attendance</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="employees-table-body">
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm"></div> Loading staff list...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `);
+
+    async function loadEmployees() {
+      const tbody = document.getElementById('employees-table-body');
+
+      try {
+        const res = await API.request('/admin/users'); // Retrieve directory list
+        const users = res.data || [];
+
+        // Filter out simple customers to list only employee roles
+        const staffRoles = ['admin', 'chef', 'waiter', 'cashier', 'manager'];
+        const staff = users.filter(u => staffRoles.includes(u.role));
+
+        if (staff.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No staff users seeded yet. Use seed script.</td></tr>';
+          return;
+        }
+
+        const shifts = ['Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Night Shift'];
+
+        tbody.innerHTML = staff.map((s, index) => {
+          const shift = shifts[index % shifts.length];
+          return `
+            <tr id="staff-row-${s.id}">
+              <td>
+                <div class="fw-bold">${s.name}</div>
+                <div class="small text-muted">${s.email} · ${s.phone}</div>
+              </td>
+              <td><span class="badge bg-primary text-capitalize">${s.role}</span></td>
+              <td><span class="badge bg-secondary">${shift}</span></td>
+              <td>
+                <span class="badge bg-success" id="attendance-${s.id}">Present (Check-In)</span>
+              </td>
+              <td>
+                <span class="badge bg-${s.is_active ? 'success' : 'danger'}">${s.is_active ? 'Active' : 'Suspended'}</span>
+              </td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-secondary me-1" onclick="toggleAttendance(${s.id})">
+                  <i class="fa-solid fa-clock"></i> Log Check-Out
+                </button>
+              </td>
+            </tr>`;
+        }).join('');
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">${err.message}</td></tr>`;
+      }
+    }
+
+    function toggleAttendance(id) {
+      const badge = document.getElementById(`attendance-${id}`);
+      if (badge.textContent.includes('Present')) {
+        badge.textContent = 'Checked-Out';
+        badge.className = 'badge bg-danger';
+        Utils.showToast('Employee log check-out registered', 'info');
+      } else {
+        badge.textContent = 'Present (Check-In)';
+        badge.className = 'badge bg-success';
+        Utils.showToast('Employee log check-in registered', 'success');
+      }
+    }
+
+    loadEmployees();
+  </script>
+</body>
+</html>

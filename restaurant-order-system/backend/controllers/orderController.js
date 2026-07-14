@@ -8,7 +8,8 @@ const orderController = {
     try {
       const {
         name, phone, email, address, city, pincode,
-        items, payment, couponCode, tip, orderNotes
+        items, payment, couponCode, tip, orderNotes,
+        order_type, table_id, scheduled_at, service_charge
       } = req.body;
 
       if (!items || items.length === 0) {
@@ -48,7 +49,11 @@ const orderController = {
         coupon_code: couponCode || null,
         payment_method: payment || 'COD',
         order_notes: orderNotes || null,
-        estimated_delivery: estimatedDelivery
+        estimated_delivery: estimatedDelivery,
+        order_type: order_type || 'delivery',
+        table_id: table_id ? parseInt(table_id, 10) : null,
+        scheduled_at: scheduled_at || null,
+        service_charge: service_charge ? parseFloat(service_charge) : 0.00
       };
 
       const order = await Order.create(orderData, items);
@@ -68,7 +73,8 @@ const orderController = {
         total: totals.total,
         payment: payment || 'COD',
         status: 'Pending',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        order_type: order_type || 'delivery'
       };
 
       try {

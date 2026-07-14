@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Bill — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <div class="page-header">
+    <div class="container text-center">
+      <h1><i class="fa-solid fa-file-invoice-dollar me-2"></i>Dine-In Digital Bill</h1>
+      <p class="text-muted">Review, verify, and complete payment for your active dining session</p>
+    </div>
+  </div>
+
+  <section class="py-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-6">
+
+          <!-- Order ID Lookup -->
+          <div class="glass-card no-hover p-4 mb-4">
+            <h5 class="fw-bold mb-3">Lookup Your Table Order</h5>
+            <div class="input-group">
+              <input type="text" class="form-control" id="order-id-input" placeholder="Enter Order ID (e.g. ORD1001)">
+              <button class="btn btn-primary-custom" id="lookup-btn" style="border-radius: 0 12px 12px 0 !important;">
+                <i class="fa-solid fa-search me-1"></i>Fetch Bill
+              </button>
+            </div>
+          </div>
+
+          <!-- Bill details -->
+          <div class="glass-card no-hover p-4 p-md-5" id="bill-card" style="display: none;">
+            <div class="text-center mb-4 pb-3 border-bottom">
+              <h5 class="fw-bold mb-1" id="bill-order-id">—</h5>
+              <div class="badge bg-warning" id="bill-status">Pending Payment</div>
+            </div>
+
+            <!-- Items Table -->
+            <div class="table-responsive mb-4">
+              <table class="table table-sm align-middle">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-end">Total</th>
+                  </tr>
+                </thead>
+                <tbody id="bill-items-list">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Bill Breakdown -->
+            <div class="p-3 rounded-4 mb-4" style="background:var(--bg-card);border:1px solid var(--border)">
+              <div class="d-flex justify-content-between mb-2 small">
+                <span>Subtotal</span>
+                <span id="bill-subtotal">—</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2 small">
+                <span>GST (5%)</span>
+                <span id="bill-gst">—</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2 small text-success" id="discount-row" style="display: none;">
+                <span>Discount</span>
+                <span id="bill-discount">—</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2 small" id="tip-row" style="display: none;">
+                <span>Tip</span>
+                <span id="bill-tip">—</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2 small">
+                <span>Service Charge (10%)</span>
+                <span id="bill-service">—</span>
+              </div>
+              <hr class="my-2">
+              <div class="d-flex justify-content-between fs-5 fw-bold" style="color:var(--primary)">
+                <span>Grand Total</span>
+                <span id="bill-total">—</span>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="row g-2">
+              <div class="col-6">
+                <a href="#" class="btn btn-outline-secondary w-100" id="download-pdf-btn">
+                  <i class="fa-solid fa-file-pdf me-1"></i>PDF Receipt
+                </a>
+              </div>
+              <div class="col-6">
+                <button class="btn btn-primary-custom w-100" id="pay-bill-btn" onclick="payBill()">
+                  <i class="fa-solid fa-credit-card me-1"></i>Pay Now
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty lookup screen -->
+          <div class="glass-card no-hover p-5 text-center text-muted" id="empty-state">
+            <i class="fa-solid fa-file-invoice fa-3x mb-3 text-muted"></i>
+            <h5>Verify & Pay</h5>
+            <p class="small">Enter your Order ID from table checkout to view billing charges.</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/theme.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = Components.navbar();
+    document.getElementById('footer').innerHTML = Components.footer();
+    Theme.init();
+    Cart.updateBadge();
+
+    const params = new URLSearchParams(window.location.search);
+    const urlOrderId = params.get('orderId');
+
+    async function loadBill(orderId) {
+      if (!orderId) return;
+      Utils.showLoader(true);
+
+      try {
+        const res = await API.generateBillDetails(orderId);
+        const b = res.data.bill;
+        const order = res.data.order;
+
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('bill-card').style.display = 'block';
+
+        document.getElementById('bill-order-id').textContent = `Invoice for ${orderId}`;
+        document.getElementById('bill-subtotal').textContent = Utils.formatPrice(b.subtotal);
+        document.getElementById('bill-gst').textContent = Utils.formatPrice(b.gst);
+        document.getElementById('bill-service').textContent = Utils.formatPrice(b.service_charge);
+        document.getElementById('bill-total').textContent = Utils.formatPrice(b.grand_total);
+
+        // Optional discounts
+        if (b.discount > 0) {
+          document.getElementById('discount-row').style.display = 'flex';
+          document.getElementById('bill-discount').textContent = `-${Utils.formatPrice(b.discount)}`;
+        }
+        // Optional tips
+        if (b.tip > 0) {
+          document.getElementById('tip-row').style.display = 'flex';
+          document.getElementById('bill-tip').textContent = Utils.formatPrice(b.tip);
+        }
+
+        // Status update
+        const statusBadge = document.getElementById('bill-status');
+        const payBtn = document.getElementById('pay-bill-btn');
+        if (order.payment_status === 'paid') {
+          statusBadge.textContent = 'Paid & Settled';
+          statusBadge.className = 'badge bg-success';
+          payBtn.disabled = true;
+          payBtn.textContent = 'Settled';
+        } else {
+          statusBadge.textContent = 'Pending Payment';
+          statusBadge.className = 'badge bg-warning';
+          payBtn.disabled = false;
+          payBtn.innerHTML = '<i class="fa-solid fa-credit-card me-1"></i>Pay Now';
+        }
+
+        // Items population
+        document.getElementById('bill-items-list').innerHTML = (order.items || []).map(i => `
+          <tr>
+            <td>${i.food_name}</td>
+            <td class="text-center">${i.quantity}</td>
+            <td class="text-end">${Utils.formatPrice(i.total_price)}</td>
+          </tr>`).join('');
+
+        // PDF URL mapping
+        document.getElementById('download-pdf-btn').href = API.getBillPdfUrl(orderId);
+
+      } catch (err) {
+        Utils.showToast(err.message || 'Invoice details not available.', 'error');
+      } finally {
+        Utils.showLoader(false);
+      }
+    }
+
+    // Pay simulated function
+    function payBill() {
+      Swal.fire({
+        title: 'Complete Dine-In Bill?',
+        text: "This simulates secure payment of table order.",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Settle Payment',
+        confirmButtonColor: '#ff6b35',
+        customClass: { popup: 'rounded-4' }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Utils.showToast('Payment settled successfully! Thank you.', 'success');
+          // Reload bill to show Paid status
+          const id = document.getElementById('order-id-input').value.trim() || urlOrderId;
+          
+          // Call API simulation backend to mark paid
+          API.request(`/orders/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ status: 'Delivered' }) // Settle order state to kitchen completed
+          }).then(() => {
+            loadBill(id);
+          });
+        }
+      });
+    }
+
+    document.getElementById('lookup-btn').addEventListener('click', () => {
+      const orderId = document.getElementById('order-id-input').value.trim();
+      loadBill(orderId);
+    });
+
+    if (urlOrderId) {
+      document.getElementById('order-id-input').value = urlOrderId;
+      loadBill(urlOrderId);
+    }
+  </script>
+</body>
+</html>

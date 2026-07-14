@@ -19,6 +19,21 @@ const Theme = {
     Cart.updateBadge();
     this.updateAuthNav();
     window.addEventListener('cartUpdated', () => Cart.updateBadge());
+
+    // PWA Manifest Injection
+    if (!document.querySelector('link[rel="manifest"]')) {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = '/manifest.json';
+      document.head.appendChild(link);
+    }
+
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('SW registered successfully:', reg.scope))
+        .catch(err => console.warn('SW registration failed:', err));
+    }
   },
 
   toggle() {
@@ -64,5 +79,45 @@ const Theme = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => Theme.init());
+document.addEventListener('DOMContentLoaded', () => {
+  Theme.init();
+
+  // Load Google Translate script dynamically
+  if (!document.getElementById('google-translate-script')) {
+    const s = document.createElement('script');
+    s.id = 'google-translate-script';
+    s.type = 'text/javascript';
+    s.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    document.body.appendChild(s);
+  }
+});
+
+// Google Translate callback
+window.googleTranslateElementInit = function() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'en',
+    includedLanguages: 'en,ta,hi',
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+  }, 'google_translate_element');
+};
+
+// Accessibility: Adjust Font Size helper
+let activeSizeState = 'medium';
+window.adjustFontSize = function() {
+  const root = document.documentElement;
+  if (activeSizeState === 'medium') {
+    root.style.setProperty('font-size', '18px', 'important');
+    activeSizeState = 'large';
+    if (typeof Utils !== 'undefined') Utils.showToast('Font size set to Large', 'info');
+  } else if (activeSizeState === 'large') {
+    root.style.setProperty('font-size', '14px', 'important');
+    activeSizeState = 'small';
+    if (typeof Utils !== 'undefined') Utils.showToast('Font size set to Small', 'info');
+  } else {
+    root.style.setProperty('font-size', '16px', 'important');
+    activeSizeState = 'medium';
+    if (typeof Utils !== 'undefined') Utils.showToast('Font size set to Medium', 'info');
+  }
+};
+
 window.Theme = Theme;

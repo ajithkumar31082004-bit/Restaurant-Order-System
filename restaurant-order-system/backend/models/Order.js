@@ -15,8 +15,9 @@ const Order = {
       const [orderResult] = await connection.execute(
         `INSERT INTO orders (order_id, user_id, customer_name, customer_phone, customer_email,
          delivery_address, city, pincode, subtotal, gst_amount, delivery_charge, tip_amount,
-         discount_amount, total_amount, coupon_code, payment_method, order_notes, estimated_delivery)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         discount_amount, total_amount, coupon_code, payment_method, order_notes, estimated_delivery,
+         order_type, table_id, waiter_id, scheduled_at, service_charge)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           orderData.order_id, orderData.user_id || null, orderData.customer_name,
           orderData.customer_phone, orderData.customer_email || null,
@@ -24,7 +25,10 @@ const Order = {
           orderData.subtotal, orderData.gst_amount, orderData.delivery_charge,
           orderData.tip_amount, orderData.discount_amount, orderData.total_amount,
           orderData.coupon_code || null, orderData.payment_method,
-          orderData.order_notes || null, orderData.estimated_delivery
+          orderData.order_notes || null, orderData.estimated_delivery,
+          orderData.order_type || 'delivery', orderData.table_id || null,
+          orderData.waiter_id || null, orderData.scheduled_at || null,
+          orderData.service_charge || 0.00
         ]
       );
 

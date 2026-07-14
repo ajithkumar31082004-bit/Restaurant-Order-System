@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Waitlist — FoodHub Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="admin-layout"></div>
+
+  <!-- Add to Waitlist Modal -->
+  <div class="modal fade" id="waitlistModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">Add to Waitlist</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pb-4">
+          <form id="waitlist-form">
+            <div class="mb-3">
+              <label class="form-label">Customer Name *</label>
+              <input type="text" class="form-control" id="wt-name" required placeholder="e.g. John Doe">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Phone Number *</label>
+              <input type="tel" class="form-control" id="wt-phone" required pattern="[0-9]{10}" placeholder="9876543210">
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label">Party Size *</label>
+                <input type="number" class="form-control" id="wt-size" required value="2" min="1">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Preferred Area</label>
+                <select class="form-select" id="wt-area">
+                  <option value="any" selected>Any</option>
+                  <option value="indoor">Indoor</option>
+                  <option value="outdoor">Outdoor</option>
+                  <option value="vip">VIP</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary-custom w-100">
+              Add to Queue
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../../js/api.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/admin.js"></script>
+  <script>
+    if (!Admin.requireAdmin()) throw new Error('Unauthorized');
+
+    document.getElementById('admin-layout').innerHTML = Admin.layout('waitlist', `
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="mb-0 fw-bold">Customer Waitlist Queue</h4>
+          <p class="text-muted small mb-0">Manage walk-in guest queues when tables are occupied</p>
+        </div>
+        <button class="btn btn-primary-custom btn-sm" id="btn-add-waitlist">
+          <i class="fa-solid fa-plus me-1"></i>Add Guest
+        </button>
+      </div>
+
+      <!-- Waitlist Grid -->
+      <div class="glass-card no-hover p-4">
+        <div class="table-responsive hide-scroll">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Queue Pos</th>
+                <th>Guest Details</th>
+                <th>Party Size</th>
+                <th>Preferred Area</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="waitlist-table-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `);
+
+    const waitlistModal = new bootstrap.Modal(document.getElementById('waitlistModal'));
+    
+    // Seed waitlist local array
+    let waitlistQueue = [
+      { id: 1, name: 'Anjali Sharma', phone: '9827364510', size: 4, area: 'VIP', status: 'waiting', pos: 1 },
+      { id: 2, name: 'Vikram Singh', phone: '9128374620', size: 2, area: 'outdoor', status: 'notified', pos: 2 },
+      { id: 3, name: 'Rohan Mehta', phone: '9382716450', size: 6, area: 'any', status: 'waiting', pos: 3 }
+    ];
+
+    document.getElementById('btn-add-waitlist').addEventListener('click', () => {
+      waitlistModal.show();
+    });
+
+    document.getElementById('waitlist-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('wt-name').value.trim();
+      const phone = document.getElementById('wt-phone').value.trim();
+      const size = parseInt(document.getElementById('wt-size').value, 10);
+      const area = document.getElementById('wt-area').value;
+
+      const nextPos = waitlistQueue.length + 1;
+      waitlistQueue.push({
+        id: Date.now(),
+        name, phone, size, area, status: 'waiting', pos: nextPos
+      });
+
+      waitlistModal.hide();
+      e.target.reset();
+      Utils.showToast('Guest added to waitlist queue!', 'success');
+      renderWaitlist();
+    });
+
+    function renderWaitlist() {
+      const tbody = document.getElementById('waitlist-table-body');
+      
+      const active = waitlistQueue.filter(q => q.status === 'waiting' || q.status === 'notified');
+
+      if (active.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Waitlist queue is empty.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = active.map((q, index) => {
+        let actionBtn = '';
+        if (q.status === 'waiting') {
+          actionBtn = `<button class="btn btn-sm btn-outline-warning me-1" onclick="notifyGuest(${q.id})"><i class="fa-solid fa-bell me-1"></i>Notify SMS</button>`;
+        } else if (q.status === 'notified') {
+          actionBtn = `<button class="btn btn-sm btn-outline-success me-1" onclick="seatGuest(${q.id})"><i class="fa-solid fa-chair me-1"></i>Seat Guest</button>`;
+        }
+
+        return `
+          <tr id="wait-row-${q.id}">
+            <td><strong>#${index + 1}</strong></td>
+            <td>
+              <div class="fw-bold">${q.name}</div>
+              <div class="small text-muted">${q.phone}</div>
+            </td>
+            <td><strong>${q.size} pax</strong></td>
+            <td><span class="badge bg-secondary text-capitalize">${q.area}</span></td>
+            <td>
+              <span class="badge bg-${q.status === 'notified' ? 'info' : 'secondary'}">${q.status.toUpperCase()}</span>
+            </td>
+            <td class="text-end">
+              ${actionBtn}
+              <button class="btn btn-sm btn-outline-danger" onclick="cancelWaitlist(${q.id})">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function notifyGuest(id) {
+      const guest = waitlistQueue.find(q => q.id === id);
+      if (guest) {
+        guest.status = 'notified';
+        Utils.showToast(`SMS sent to ${guest.name}! 📲`, 'success');
+        renderWaitlist();
+      }
+    }
+
+    function seatGuest(id) {
+      const guest = waitlistQueue.find(q => q.id === id);
+      if (guest) {
+        guest.status = 'seated';
+        Utils.showToast(`${guest.name} has been seated. Table status updated.`, 'success');
+        renderWaitlist();
+      }
+    }
+
+    function cancelWaitlist(id) {
+      waitlistQueue = waitlistQueue.filter(q => q.id !== id);
+      Utils.showToast('Waitlist record cancelled', 'info');
+      renderWaitlist();
+    }
+
+    renderWaitlist();
+  </script>
+</body>
+</html>

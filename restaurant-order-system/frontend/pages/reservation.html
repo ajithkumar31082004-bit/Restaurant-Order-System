@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Table Reservation — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <div class="page-header">
+    <div class="container">
+      <h1><i class="fa-solid fa-calendar-days me-2"></i>Book a Table</h1>
+      <p>Reserve a table for your next meal or special event</p>
+    </div>
+  </div>
+
+  <section class="py-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+
+          <div class="glass-card no-hover p-4 p-md-5">
+            <h4 class="fw-bold mb-4 text-center">Reservation Form</h4>
+
+            <form id="reservation-form" novalidate>
+              <div class="row g-3">
+                <!-- Name -->
+                <div class="col-md-6">
+                  <label class="form-label">Full Name *</label>
+                  <input type="text" class="form-control" id="res-name" required placeholder="e.g. Ajith Kumar">
+                </div>
+
+                <!-- Phone -->
+                <div class="col-md-6">
+                  <label class="form-label">Phone Number *</label>
+                  <div class="input-group">
+                    <span class="input-group-text" style="background:var(--bg-card);border:1.5px solid var(--border);border-right:none;border-radius:12px 0 0 12px">+91</span>
+                    <input type="tel" class="form-control" id="res-phone" pattern="[0-9]{10}" maxlength="10" required placeholder="9876543210" style="border-radius:0 12px 12px 0 !important">
+                  </div>
+                </div>
+
+                <!-- Email -->
+                <div class="col-12">
+                  <label class="form-label">Email Address</label>
+                  <input type="email" class="form-control" id="res-email" placeholder="you@example.com">
+                </div>
+
+                <!-- Date -->
+                <div class="col-md-4">
+                  <label class="form-label">Reservation Date *</label>
+                  <input type="date" class="form-control" id="res-date" required>
+                </div>
+
+                <!-- Time -->
+                <div class="col-md-4">
+                  <label class="form-label">Reservation Time *</label>
+                  <input type="time" class="form-control" id="res-time" required>
+                </div>
+
+                <!-- Guests -->
+                <div class="col-md-4">
+                  <label class="form-label">Guests Count *</label>
+                  <select class="form-select" id="res-guests" required>
+                    <option value="1">1 Guest</option>
+                    <option value="2" selected>2 Guests</option>
+                    <option value="3">3 Guests</option>
+                    <option value="4">4 Guests</option>
+                    <option value="5">5 Guests</option>
+                    <option value="6">6 Guests</option>
+                    <option value="8">8 Guests (VIP)</option>
+                    <option value="10">10 Guests (VIP)</option>
+                    <option value="12">12 Guests (VIP)</option>
+                  </select>
+                </div>
+
+                <!-- Preference -->
+                <div class="col-md-6">
+                  <label class="form-label">Table Preference</label>
+                  <select class="form-select" id="res-preference">
+                    <option value="any" selected>Any (No preference)</option>
+                    <option value="indoor">Indoor Seat</option>
+                    <option value="outdoor">Outdoor Garden</option>
+                    <option value="vip">VIP Cabin</option>
+                    <option value="window">Window Side Seat</option>
+                    <option value="bar">Bar Lounge</option>
+                  </select>
+                </div>
+
+                <!-- Special Event -->
+                <div class="col-md-6">
+                  <label class="form-label">Special Event</label>
+                  <select class="form-select" id="res-event">
+                    <option value="none" selected>None</option>
+                    <option value="birthday">Birthday Party</option>
+                    <option value="anniversary">Anniversary Ceremony</option>
+                    <option value="business">Business Meeting</option>
+                    <option value="engagement">Engagement Party</option>
+                    <option value="other">Other Event</option>
+                  </select>
+                </div>
+
+                <!-- Special Requests -->
+                <div class="col-12">
+                  <label class="form-label">Special Requests / Notes</label>
+                  <textarea class="form-control" id="res-notes" rows="2" placeholder="e.g. wheelchair accessible, high chair for baby, quiet table..."></textarea>
+                </div>
+              </div>
+
+              <!-- Available Tables Checker Panel -->
+              <div class="mt-4 p-3 rounded-4 border" style="background:var(--primary-light); display:none;" id="availability-status">
+                <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+                <span id="availability-text">Checking table availability...</span>
+              </div>
+
+              <button type="submit" class="btn btn-primary-custom w-100 mt-4 btn-lg" id="submit-res-btn">
+                <i class="fa-solid fa-check-circle me-2"></i>Confirm Reservation
+              </button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/theme.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = Components.navbar('reservation');
+    document.getElementById('footer').innerHTML = Components.footer();
+    Theme.init();
+    Cart.updateBadge();
+
+    // Autofill user details
+    const user = Utils.getUser();
+    if (user) {
+      document.getElementById('res-name').value = user.name || '';
+      document.getElementById('res-phone').value = user.phone || '';
+      document.getElementById('res-email').value = user.email || '';
+    }
+
+    // Min date setup to today
+    const dateInput = document.getElementById('res-date');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+    dateInput.value = today;
+
+    // Check table availability dynamically
+    async function checkAvailability() {
+      const date = dateInput.value;
+      const time = document.getElementById('res-time').value;
+      const guests = document.getElementById('res-guests').value;
+      const statusPanel = document.getElementById('availability-status');
+      const statusText = document.getElementById('availability-text');
+
+      if (!date || !time) return;
+
+      statusPanel.style.display = 'block';
+      statusText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking live table availability...';
+
+      try {
+        const res = await API.getAvailableTables({ date, time, guests });
+        if (res.success) {
+          const count = res.count || 0;
+          if (count > 0) {
+            statusText.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Tables available!</span> Found ${count} tables matching your preference.`;
+          } else {
+            statusText.innerHTML = '<span class="text-danger fw-bold"><i class="fa-solid fa-circle-xmark me-1"></i> No matching tables.</span> Try selecting a different time or area.';
+          }
+        }
+      } catch (err) {
+        statusText.innerHTML = '<span class="text-muted">Unable to verify table layout at this time. Proceeding to manual waitlist.</span>';
+      }
+    }
+
+    dateInput.addEventListener('change', checkAvailability);
+    document.getElementById('res-time').addEventListener('change', checkAvailability);
+    document.getElementById('res-guests').addEventListener('change', checkAvailability);
+
+    // Form submit
+    document.getElementById('reservation-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const customer_name = document.getElementById('res-name').value.trim();
+      const customer_phone = document.getElementById('res-phone').value.trim();
+      const customer_email = document.getElementById('res-email').value.trim();
+      const reservation_date = dateInput.value;
+      const reservation_time = document.getElementById('res-time').value;
+      const guest_count = parseInt(document.getElementById('res-guests').value, 10);
+      const table_preference = document.getElementById('res-preference').value;
+      const special_event = document.getElementById('res-event').value;
+      const special_requests = document.getElementById('res-notes').value.trim();
+
+      if (!customer_name || !customer_phone || !reservation_date || !reservation_time) {
+        Utils.showToast('Please fill out all required fields', 'error');
+        return;
+      }
+
+      if (customer_phone.length !== 10) {
+        Utils.showToast('Please enter a valid 10-digit phone number', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('submit-res-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Booking Table...';
+
+      try {
+        const res = await API.createReservation({
+          customer_name, customer_phone, customer_email,
+          reservation_date, reservation_time, guest_count,
+          table_preference, special_event, special_requests
+        });
+
+        Utils.showToast('Table reserved successfully! 🎉', 'success');
+        
+        sessionStorage.setItem('last_reservation', JSON.stringify(res.data));
+
+        setTimeout(() => {
+          window.location.href = 'reservation-confirm.html';
+        }, 1500);
+
+      } catch (err) {
+        Utils.showToast(err.message || 'Reservation booking failed. Try a different slot.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check-circle me-2"></i>Confirm Reservation';
+      }
+    });
+  </script>
+</body>
+</html>

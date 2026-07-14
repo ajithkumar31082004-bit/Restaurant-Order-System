@@ -45,6 +45,15 @@ const Components = {
             ${authLinks}
           </ul>
           <div class="d-flex align-items-center gap-2 ms-3">
+            <!-- Language Dropdown -->
+            <div id="google_translate_element" class="me-2" style="font-size:0.75rem;"></div>
+
+            <!-- Font Adjuster -->
+            <div class="theme-toggle me-1" title="Adjust font size" onclick="adjustFontSize()" style="padding:4px 8px; border-radius:8px;">
+              <i class="fa-solid fa-font"></i>
+            </div>
+
+            <!-- Theme Toggle -->
             <div class="theme-toggle" title="Toggle dark/light mode" id="themeToggle">
               <i class="fa-solid fa-moon" id="theme-icon"></i>
             </div>
@@ -132,7 +141,173 @@ const Components = {
     <a href="cart.html" class="floating-cart d-md-none" aria-label="Cart">
       <i class="fa-solid fa-cart-shopping"></i>
       <span class="cart-badge cart-count" style="display:none;top:0;right:0">0</span>
-    </a>`;
+    </a>
+
+    <!-- Floating AI Chatbot Button & Window -->
+    <style>
+      .ai-chatbot-btn {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--gradient);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        z-index: 9990;
+        transition: all 0.3s ease;
+      }
+      .ai-chatbot-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+      }
+      .ai-chatbot-window {
+        position: fixed;
+        bottom: 6rem;
+        right: 2rem;
+        width: 330px;
+        height: 440px;
+        border-radius: 18px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 9991;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      .ai-chatbot-header {
+        padding: 0.85rem 1rem;
+        background: var(--gradient);
+        color: #fff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+      .ai-chatbot-messages {
+        flex-grow: 1;
+        padding: 0.85rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+      .ai-msg {
+        padding: 0.5rem 0.75rem;
+        border-radius: 12px;
+        max-width: 85%;
+        font-size: 0.82rem;
+        line-height: 1.4;
+      }
+      .ai-msg.user {
+        background: var(--primary-light);
+        color: var(--primary);
+        align-self: flex-end;
+        border-bottom-right-radius: 2px;
+      }
+      .ai-msg.bot {
+        background: var(--border);
+        align-self: flex-start;
+        border-bottom-left-radius: 2px;
+      }
+      .ai-chatbot-input {
+        padding: 0.65rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 0.4rem;
+        background: var(--bg-card);
+      }
+      .ai-chatbot-input input {
+        flex-grow: 1;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.35rem 0.65rem;
+        font-size: 0.82rem;
+        background: transparent;
+        color: var(--text-color);
+      }
+      .ai-chatbot-input input:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
+    </style>
+
+    <button class="ai-chatbot-btn" onclick="toggleChatbot()" title="Ask FoodHub AI">
+      <i class="fa-solid fa-robot"></i>
+    </button>
+
+    <div class="ai-chatbot-window" id="aiChatbotWindow">
+      <div class="ai-chatbot-header">
+        <span><i class="fa-solid fa-brain me-1 small"></i>FoodHub Assistant</span>
+        <button class="btn btn-link text-white p-0" onclick="toggleChatbot()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="ai-chatbot-messages" id="aiChatbotMsgs">
+        <div class="ai-msg bot">Hello! I am your AI Assistant. Ask me about our menu, special offers, or reservations! 🍕</div>
+      </div>
+      <div class="ai-chatbot-input">
+        <input type="text" id="aiChatbotInputText" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendChatMsg()">
+        <button class="btn btn-primary-custom btn-sm" onclick="sendChatMsg()"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
+    </div>
+
+    <script>
+      window.toggleChatbot = function() {
+        const win = document.getElementById('aiChatbotWindow');
+        if (win.style.display === 'none' || win.style.display === '') {
+          win.style.display = 'flex';
+          const container = document.getElementById('aiChatbotMsgs');
+          container.scrollTop = container.scrollHeight;
+        } else {
+          win.style.display = 'none';
+        }
+      };
+
+      let botMsgCounter = 0;
+      window.sendChatMsg = async function() {
+        const input = document.getElementById('aiChatbotInputText');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        input.value = '';
+        appendLocalMsg('user', msg);
+
+        // Show typing loader
+        const loaderId = appendLocalMsg('bot', '<span class="spinner-border spinner-border-sm me-1"></span>typing...');
+
+        try {
+          const res = await API.sendChatMessage(msg);
+          const reply = res.data.reply;
+          document.getElementById(loaderId).innerHTML = reply;
+        } catch (err) {
+          document.getElementById(loaderId).textContent = "I'm offline. How can I help you manually?";
+        }
+      };
+
+      function appendLocalMsg(sender, text) {
+        const container = document.getElementById('aiChatbotMsgs');
+        const id = 'aimsg-local-' + (botMsgCounter++);
+        const el = document.createElement('div');
+        el.className = 'ai-msg ' + sender;
+        el.id = id;
+        el.innerHTML = text;
+        container.appendChild(el);
+        container.scrollTop = container.scrollHeight;
+        return id;
+      }
+    </script>
+    `;
   },
 
   foodCard(food, options = {}) {

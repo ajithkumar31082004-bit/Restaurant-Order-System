@@ -92,6 +92,39 @@ const API = {
   updateCoupon: (id, data) => API.request(`/coupons/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCoupon: (id) => API.request(`/coupons/${id}`, { method: 'DELETE' }),
 
+  // V2.0 Additions
+  getAvailableTables: (params) => API.request(`/reservations/available-tables?${new URLSearchParams(params).toString()}`, { auth: false }),
+  createReservation: (data) => API.request('/reservations', { method: 'POST', body: JSON.stringify(data) }),
+  getReservations: (params = {}) => API.request(`/reservations?${new URLSearchParams(params).toString()}`),
+  updateReservationStatus: (id, status) => API.request(`/reservations/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+
+  getTables: (params = {}) => API.request(`/tables?${new URLSearchParams(params).toString()}`, { auth: false }),
+  getFloorMap: () => API.request('/tables/floor-map', { auth: false }),
+  getTableQRCode: (id) => API.request(`/tables/${id}/qr`),
+  updateTableStatus: (id, status) => API.request(`/tables/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+
+  getKitchenOrders: (params = {}) => API.request(`/kitchen/orders?${new URLSearchParams(params).toString()}`),
+  updateKitchenStatus: (id, status) => API.request(`/kitchen/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+
+  getWaiterRequests: () => API.request('/waiter/requests'),
+  createWaiterRequest: (data) => API.request('/waiter/request', { method: 'POST', body: JSON.stringify(data), auth: false }),
+  resolveWaiterRequest: (id) => API.request(`/waiter/requests/${id}/resolve`, { method: 'PUT' }),
+
+  getPendingBillOrders: () => API.request('/cashier/orders'),
+  generateBillDetails: (orderId) => API.request(`/cashier/invoice/${orderId}`),
+  getBillPdfUrl: (orderId) => `${API.baseURL}/cashier/invoice/${orderId}/pdf`,
+  processRefund: (data) => API.request('/cashier/refund', { method: 'POST', body: JSON.stringify(data) }),
+
+  submitFeedback: (data) => API.request('/ai/feedback', { method: 'POST', body: JSON.stringify(data), auth: false }),
+  getFeedback: () => API.request('/ai/feedback'),
+  getFeedbackSummary: () => API.request('/ai/feedback-summary'),
+  getFoodRecommendations: (userId) => API.request(`/ai/recommendations/${userId}`),
+  sendChatMessage: (message, context = {}) => API.request('/ai/chat', { method: 'POST', body: JSON.stringify({ message, ...context }), auth: false }),
+
+  getInventory: () => API.request('/inventory'),
+  getLowStockInventory: () => API.request('/inventory/low-stock'),
+  updateInventoryStock: (id, qty) => API.request(`/inventory/${id}`, { method: 'PUT', body: JSON.stringify({ quantity: qty }) }),
+
   // Health
   healthCheck: () => API.request('/admin/health', { auth: false })
 };

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Table Ordering — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <div class="page-header">
+    <div class="container text-center">
+      <h1><i class="fa-solid fa-qrcode me-2"></i>Dine-In Table Order</h1>
+      <h3 class="fw-bold mt-2" style="color:var(--primary)"><span id="table-label">Table T-01</span></h3>
+      <p class="text-muted">Place your order directly to the kitchen. No waiter required.</p>
+    </div>
+  </div>
+
+  <!-- Waiter Call Panel -->
+  <section class="pt-4 pb-2">
+    <div class="container">
+      <div class="glass-card no-hover p-3 text-center">
+        <h6 class="fw-bold mb-2">Need Assistance? Call a Waiter</h6>
+        <div class="d-flex justify-content-center gap-2 flex-wrap">
+          <button class="btn btn-outline-secondary btn-sm" onclick="callWaiter('water')"><i class="fa-solid fa-glass-water me-1"></i>Request Water</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="callWaiter('bill')"><i class="fa-solid fa-receipt me-1"></i>Request Bill</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="callWaiter('tissue')"><i class="fa-solid fa-box me-1"></i>Request Tissue</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="callWaiter('assistance')"><i class="fa-solid fa-bell me-1"></i>General Help</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ordering System -->
+  <section class="py-3">
+    <div class="container">
+      <div class="row g-4">
+        
+        <!-- Menu list -->
+        <div class="col-lg-8">
+          <div class="glass-card no-hover p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-utensils me-2"></i>Dine-In Menu</h5>
+            
+            <div class="row g-2 mb-3">
+              <div class="col-md-8">
+                <input type="text" class="form-control" id="search-input" placeholder="Search for food items...">
+              </div>
+              <div class="col-md-4">
+                <select class="form-select" id="category-filter">
+                  <option value="">All Categories</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row" id="menu-items-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Cart & Checkout Panel -->
+        <div class="col-lg-4">
+          <div class="glass-card no-hover p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-cart-shopping me-2"></i>Dine-In Cart</h5>
+            <div id="cart-list" style="max-height:200px;overflow-y:auto;" class="mb-3">
+              <!-- Dynamically populated -->
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between mb-2">
+              <span>Subtotal</span>
+              <strong id="cart-subtotal">₹0.00</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span>GST (5%)</span>
+              <strong id="cart-gst">₹0.00</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-3">
+              <span>Service Charge (10%)</span>
+              <strong id="cart-service">₹0.00</strong>
+            </div>
+            <div class="d-flex justify-content-between fs-5 mb-4" style="color:var(--primary)">
+              <strong>Total</strong>
+              <strong id="cart-total">₹0.00</strong>
+            </div>
+
+            <!-- Customer Details for Order -->
+            <form id="dine-in-checkout-form">
+              <div class="mb-3">
+                <label class="form-label">Your Name *</label>
+                <input type="text" class="form-control form-control-sm" id="cust-name" required placeholder="e.g. Ajith">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Phone Number *</label>
+                <input type="tel" class="form-control form-control-sm" id="cust-phone" required pattern="[0-9]{10}" placeholder="9876543210">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Payment Method *</label>
+                <select class="form-select form-select-sm" id="payment-method">
+                  <option value="COD">Pay at Counter (Cash/Card)</option>
+                  <option value="UPI">UPI Payment</option>
+                  <option value="Credit Card">Credit Card</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-primary-custom w-100" id="place-order-btn">
+                <i class="fa-solid fa-fire me-1"></i>Send to Kitchen
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <div id="footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/theme.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = Components.navbar('menu');
+    document.getElementById('footer').innerHTML = Components.footer();
+    Theme.init();
+
+    const params = new URLSearchParams(window.location.search);
+    const tableNumber = params.get('table') || 'T-01';
+    document.getElementById('table-label').textContent = `Table ${tableNumber}`;
+
+    let tableId = 1;
+    let menuItems = [];
+
+    // Local table lookup & details preload
+    const user = Utils.getUser();
+    if (user) {
+      document.getElementById('cust-name').value = user.name || '';
+      document.getElementById('cust-phone').value = user.phone || '';
+    }
+
+    // Call Waiter API
+    async function callWaiter(requestType) {
+      try {
+        const res = await API.createWaiterRequest({
+          table_id: tableId,
+          request_type: requestType,
+          message: `Customer at table ${tableNumber} requests ${requestType}`
+        });
+        if (res.success) {
+          Utils.showToast(`Waiter alerted for ${requestType}! 🔔`, 'success');
+        }
+      } catch (err) {
+        Utils.showToast('Unable to summon waiter. Please visit cashier counter.', 'error');
+      }
+    }
+
+    // Load menu categories and items
+    async function initPage() {
+      try {
+        // Load table ID matching the table number
+        const tablesRes = await API.getTables();
+        const matchedTable = (tablesRes.data || []).find(t => t.table_number === tableNumber);
+        if (matchedTable) {
+          tableId = matchedTable.id;
+        }
+
+        const [catRes, foodRes] = await Promise.all([
+          API.getCategories(),
+          API.getFoods()
+        ]);
+
+        const categories = catRes.data || [];
+        menuItems = foodRes.data || [];
+
+        // Categories dropdown
+        const select = document.getElementById('category-filter');
+        categories.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        });
+
+        renderMenu();
+        updateCartDisplay();
+
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Render Menu grid
+    function renderMenu() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const catId = document.getElementById('category-filter').value;
+      const grid = document.getElementById('menu-items-grid');
+
+      const filtered = menuItems.filter(f => {
+        const matchesSearch = f.name.toLowerCase().includes(search) || (f.description || '').toLowerCase().includes(search);
+        const matchesCat = !catId || f.category_id == catId;
+        return matchesSearch && matchesCat;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="col-12 text-center text-muted py-4">No menu items found.</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(f => {
+        const img = Utils.getFoodImage(f);
+        const effectivePrice = f.discount_price || f.price;
+        return `
+          <div class="col-md-6 mb-3">
+            <div class="d-flex align-items-center gap-3 p-2 rounded-4 border" style="background:var(--bg-card)">
+              <img src="${img}" style="width:70px;height:70px;object-fit:cover;border-radius:10px;">
+              <div class="flex-grow-1">
+                <div class="fw-bold" style="font-size:0.92rem">${f.name}</div>
+                <div class="text-muted small">${Utils.formatPrice(effectivePrice)}</div>
+              </div>
+              <button class="btn btn-primary-custom btn-sm" onclick="addToTableCart(${f.id}, '${f.name.replace(/'/g, "\\'")}', ${effectivePrice})">
+                <i class="fa-solid fa-plus"></i> Add
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    document.getElementById('search-input').addEventListener('input', renderMenu);
+    document.getElementById('category-filter').addEventListener('change', renderMenu);
+
+    // Cart Management local to QR page
+    let localCart = [];
+
+    function addToTableCart(id, name, price) {
+      const existing = localCart.find(i => i.id === id);
+      if (existing) {
+        existing.qty++;
+      } else {
+        localCart.push({ id, name, price, qty: 1 });
+      }
+      updateCartDisplay();
+      Utils.showToast(`${name} added to cart`, 'success');
+    }
+
+    function changeQty(id, delta) {
+      const item = localCart.find(i => i.id === id);
+      if (item) {
+        item.qty += delta;
+        if (item.qty <= 0) {
+          localCart = localCart.filter(i => i.id !== id);
+        }
+      }
+      updateCartDisplay();
+    }
+
+    function updateCartDisplay() {
+      const list = document.getElementById('cart-list');
+      if (localCart.length === 0) {
+        list.innerHTML = '<div class="text-center text-muted py-3">Cart is empty</div>';
+        document.getElementById('cart-subtotal').textContent = '₹0.00';
+        document.getElementById('cart-gst').textContent = '₹0.00';
+        document.getElementById('cart-service').textContent = '₹0.00';
+        document.getElementById('cart-total').textContent = '₹0.00';
+        return;
+      }
+
+      list.innerHTML = localCart.map(i => `
+        <div class="d-flex justify-content-between align-items-center mb-2 small">
+          <span>${i.name}</span>
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm px-2 py-0" onclick="changeQty(${i.id}, -1)">-</button>
+            <span>${i.qty}</span>
+            <button class="btn btn-outline-secondary btn-sm px-2 py-0" onclick="changeQty(${i.id}, 1)">+</button>
+            <strong>${Utils.formatPrice(i.price * i.qty)}</strong>
+          </div>
+        </div>`).join('');
+
+      const subtotal = localCart.reduce((sum, i) => sum + i.price * i.qty, 0);
+      const gst = Math.round(subtotal * 0.05 * 100) / 100;
+      const service = Math.round(subtotal * 0.10 * 100) / 100;
+      const total = subtotal + gst + service;
+
+      document.getElementById('cart-subtotal').textContent = Utils.formatPrice(subtotal);
+      document.getElementById('cart-gst').textContent = Utils.formatPrice(gst);
+      document.getElementById('cart-service').textContent = Utils.formatPrice(service);
+      document.getElementById('cart-total').textContent = Utils.formatPrice(total);
+    }
+
+    // Place Table Order
+    document.getElementById('dine-in-checkout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (localCart.length === 0) {
+        Utils.showToast('Your cart is empty!', 'warning');
+        return;
+      }
+
+      const name = document.getElementById('cust-name').value.trim();
+      const phone = document.getElementById('cust-phone').value.trim();
+      const payment = document.getElementById('payment-method').value;
+
+      const btn = document.getElementById('place-order-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Submitting...';
+
+      const payload = {
+        name, phone,
+        email: user ? user.email : '',
+        address: `Table ${tableNumber}`,
+        city: 'Dine-In',
+        pincode: '000000',
+        payment,
+        orderNotes: 'Dine-in Order placed directly from QR code.',
+        items: localCart.map(i => ({
+          foodId: i.id,
+          name: i.name,
+          qty: i.qty,
+          price: i.price
+        }))
+      };
+
+      try {
+        // Create order
+        const res = await API.createOrder(payload);
+
+        // Mark table as occupied
+        await API.updateTableStatus(tableId, 'occupied');
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Order Placed! 🍕',
+          text: 'Your order was sent directly to the kitchen queue.',
+          confirmButtonColor: '#ff6b35',
+          confirmButtonText: 'Track Order',
+          customClass: { popup: 'rounded-4' }
+        }).then(() => {
+          window.location.href = `track-order.html?orderId=${res.data.orderId}`;
+        });
+
+      } catch (err) {
+        Utils.showToast(err.message || 'Order failed. Please consult counter.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-fire me-1"></i>Send to Kitchen';
+      }
+    });
+
+    initPage();
+  </script>
+</body>
+</html>

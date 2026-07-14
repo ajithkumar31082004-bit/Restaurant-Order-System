@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Group Ordering — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <div class="page-header">
+    <div class="container text-center">
+      <h1><i class="fa-solid fa-users me-2"></i>Collaborative Group Order</h1>
+      <p class="text-muted">Invite friends or family at your table to add items to a single shared cart.</p>
+    </div>
+  </div>
+
+  <section class="py-5">
+    <div class="container">
+      <div class="row g-4">
+        
+        <!-- Invite & Group Code -->
+        <div class="col-lg-5">
+          <div class="glass-card no-hover p-4 mb-4">
+            <h5 class="fw-bold mb-3">Group Ordering Session</h5>
+            <div id="session-setup">
+              <p class="small text-muted mb-3">Start a collaborative session and share the code with people at your table.</p>
+              <button class="btn btn-primary-custom w-100" onclick="startSession()">
+                <i class="fa-solid fa-plus me-1"></i>Start Group Session
+              </button>
+            </div>
+
+            <div id="session-active" style="display: none;">
+              <div class="p-3 rounded-4 border text-center mb-3" style="background:var(--bg-card)">
+                <div class="small text-muted">Session Code</div>
+                <h3 class="fw-800 text-primary mb-2" id="session-code">GRP000</h3>
+                <button class="btn btn-sm btn-outline-secondary" onclick="copySessionCode()"><i class="fa-solid fa-copy me-1"></i>Copy Link</button>
+              </div>
+
+              <h6 class="fw-bold mb-2">Members at Table</h6>
+              <ul class="list-unstyled mb-0" id="members-list">
+                <li class="mb-2"><i class="fa-solid fa-user-astronaut text-success me-2"></i>You (Host)</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Split Bill Settings -->
+          <div class="glass-card no-hover p-4" id="split-card" style="display: none;">
+            <h5 class="fw-bold mb-3">Bill Splitting Calculator</h5>
+            <div class="mb-3">
+              <label class="form-label">Split Type</label>
+              <select class="form-select" id="split-type" onchange="calculateSplit()">
+                <option value="combined" selected>Single Payer (Combined Bill)</option>
+                <option value="equal">Equal Split (Go Dutch)</option>
+                <option value="custom">By Items Ordered</option>
+              </select>
+            </div>
+            <div class="p-3 rounded-4" style="background:var(--primary-light)" id="split-result-box">
+              <strong class="d-block" id="split-result-title">Combined Total</strong>
+              <span id="split-result-text">₹0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shared Cart -->
+        <div class="col-lg-7">
+          <div class="glass-card no-hover p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-cart-flatbed-suitcases me-2 text-primary"></i>Shared Group Cart</h5>
+            
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th>Ordered By</th>
+                    <th>Item</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-end">Price</th>
+                  </tr>
+                </thead>
+                <tbody id="group-cart-tbody">
+                  <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">No items in the group cart yet. Start a session above!</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div id="checkout-panel" style="display: none;">
+              <hr class="my-4">
+              <div class="d-flex justify-content-between fs-5 fw-bold mb-4">
+                <span>Group Total</span>
+                <span id="group-total">₹0.00</span>
+              </div>
+              <button class="btn btn-primary-custom w-100 btn-lg" onclick="checkoutGroupOrder()">
+                Place Group Order
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <div id="footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/theme.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = Components.navbar();
+    document.getElementById('footer').innerHTML = Components.footer();
+    Theme.init();
+    Cart.updateBadge();
+
+    let sessionCode = '';
+    let cartItems = [];
+
+    function startSession() {
+      const code = 'GRP' + Math.floor(1000 + Math.random() * 9000);
+      sessionCode = code;
+
+      document.getElementById('session-setup').style.display = 'none';
+      document.getElementById('session-active').style.display = 'block';
+      document.getElementById('split-card').style.display = 'block';
+      document.getElementById('checkout-panel').style.display = 'block';
+      document.getElementById('session-code').textContent = code;
+
+      // Populate dummy group order cart to simulate active friends adding items
+      cartItems = [
+        { member: 'You (Host)', name: 'Chicken Biryani', qty: 1, price: 269.00 },
+        { member: 'Friend: Sarah', name: 'Paneer Tikka', qty: 1, price: 179.00 },
+        { member: 'Friend: David', name: 'Mango Lassi', qty: 2, price: 79.00 }
+      ];
+
+      renderGroupCart();
+      calculateSplit();
+
+      // Simulate a new member joining in 4 seconds
+      setTimeout(() => {
+        const list = document.getElementById('members-list');
+        list.innerHTML += '<li class="mb-2"><i class="fa-solid fa-user text-info me-2"></i>Friend: Sarah</li>';
+        Utils.showToast('Sarah joined the table! 👥', 'info');
+      }, 3000);
+
+      // Simulate a new item added by David in 7 seconds
+      setTimeout(() => {
+        const list = document.getElementById('members-list');
+        list.innerHTML += '<li class="mb-2"><i class="fa-solid fa-user text-warning me-2"></i>Friend: David</li>';
+        cartItems.push({ member: 'Friend: David', name: 'Classic Burger', qty: 1, price: 199.00 });
+        renderGroupCart();
+        calculateSplit();
+        Utils.showToast('David added Classic Burger to group cart! 🍔', 'success');
+      }, 6000);
+    }
+
+    function copySessionCode() {
+      const url = `${window.location.origin}/pages/table-order.html?session=${sessionCode}`;
+      Utils.copyToClipboard(url, 'Group Session Link');
+    }
+
+    function renderGroupCart() {
+      const tbody = document.getElementById('group-cart-tbody');
+      tbody.innerHTML = cartItems.map(i => `
+        <tr>
+          <td><span class="badge bg-secondary">${i.member}</span></td>
+          <td><strong>${i.name}</strong></td>
+          <td class="text-center">${i.qty}</td>
+          <td class="text-end">${Utils.formatPrice(i.price * i.qty)}</td>
+        </tr>`).join('');
+
+      const total = cartItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+      document.getElementById('group-total').textContent = Utils.formatPrice(total);
+    }
+
+    function calculateSplit() {
+      const type = document.getElementById('split-type').value;
+      const total = cartItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+      const titleEl = document.getElementById('split-result-title');
+      const textEl = document.getElementById('split-result-text');
+
+      if (type === 'combined') {
+        titleEl.textContent = 'Single Payer Total';
+        textEl.textContent = Utils.formatPrice(total);
+      } else if (type === 'equal') {
+        const membersCount = 3; // You, Sarah, David
+        titleEl.textContent = `Equal Split (Among ${membersCount} payers)`;
+        textEl.textContent = `${Utils.formatPrice(total / membersCount)} per person`;
+      } else if (type === 'custom') {
+        titleEl.textContent = 'Split By Items (Your Share)';
+        const hostTotal = cartItems.filter(i => i.member.includes('You')).reduce((sum, i) => sum + i.price * i.qty, 0);
+        textEl.textContent = `${Utils.formatPrice(hostTotal)} (Your items)`;
+      }
+    }
+
+    function checkoutGroupOrder() {
+      Swal.fire({
+        icon: 'success',
+        title: 'Group Order Ready! 🍕',
+        text: 'Proceeding to table checkout of collective items.',
+        confirmButtonColor: '#ff6b35',
+        confirmButtonText: 'Checkout Order',
+        customClass: { popup: 'rounded-4' }
+      }).then(() => {
+        // Save items to global checkout cart
+        localStorage.setItem('restaurant_cart', JSON.stringify(cartItems.map((c, index) => ({
+          id: 100 + index,
+          foodId: 1,
+          name: c.name,
+          price: c.price,
+          qty: c.qty
+        }))));
+        window.location.href = 'checkout.html';
+      });
+    }
+  </script>
+</body>
+</html>

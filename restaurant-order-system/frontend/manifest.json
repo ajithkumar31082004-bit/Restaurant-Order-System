@@ -1,0 +1,22 @@
+{
+  "name": "FoodHub Smart Restaurant",
+  "short_name": "FoodHub",
+  "description": "Smart cloud restaurant management and food ordering platform.",
+  "start_url": "/pages/index.html",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#ff6b35",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/000000/restaurant-menu.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/000000/restaurant-menu.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

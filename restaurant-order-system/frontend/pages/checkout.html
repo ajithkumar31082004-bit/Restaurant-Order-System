@@ -277,7 +277,9 @@
         city:       form.city.value.trim(),
         pincode:    form.pincode.value.trim(),
         payment:    form.payment.value,
-        orderNotes: form.orderNotes.value.trim(),
+        orderNotes: form.orderNotes.value.trim() || sessionStorage.getItem('order_notes') || '',
+        order_type: sessionStorage.getItem('order_type') || 'delivery',
+        scheduled_at: sessionStorage.getItem('scheduled_at') || null,
         tip:        savedTip,
         couponCode: savedCoupon ? (savedCoupon.code || '') : '',
         items: items.map(i => ({
@@ -293,6 +295,8 @@
         Cart.clear();
         Cart.clearCoupon();
         sessionStorage.removeItem('order_notes');
+        sessionStorage.removeItem('order_type');
+        sessionStorage.removeItem('scheduled_at');
         sessionStorage.setItem('lastOrder', JSON.stringify(res.data));
         window.location.href = 'order-success.html?orderId=' + res.data.orderId;
       } catch (err) {

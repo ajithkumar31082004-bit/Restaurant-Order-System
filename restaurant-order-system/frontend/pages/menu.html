@@ -67,6 +67,16 @@
         </button>
       </div>
 
+      <!-- AI Recommendations -->
+      <div id="ai-recommends-container" style="display:none;" class="mb-4">
+        <div class="glass-card no-hover p-4 border" style="border-radius:18px; border: 1.5px solid var(--primary); background: var(--primary-light);">
+          <h5 class="fw-bold mb-3" style="color:var(--primary)"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>AI Smart Picks for You</h5>
+          <div class="row g-3" id="ai-recommends-grid">
+            <!-- AI recommendations go here -->
+          </div>
+        </div>
+      </div>
+
       <!-- Results count -->
       <div class="d-flex justify-content-between align-items-center mb-3">
         <span class="text-muted small" id="results-count"></span>
@@ -215,8 +225,40 @@
       });
     });
 
+    async function loadAIRecommendations() {
+      const container = document.getElementById('ai-recommends-container');
+      const grid = document.getElementById('ai-recommends-grid');
+      const user = Utils.getUser();
+      if (!user) return;
+
+      try {
+        const res = await API.getFoodRecommendations(user.id);
+        const recommendations = res.data || [];
+        if (recommendations.length > 0) {
+          container.style.display = 'block';
+          grid.innerHTML = recommendations.map(rec => `
+            <div class="col-md-6 mb-2">
+              <div class="p-3 rounded-4 border h-100 d-flex flex-column justify-content-between" style="background:var(--bg-card)">
+                <div>
+                  <h6 class="fw-bold mb-1">${rec.name}</h6>
+                  <p class="small text-muted mb-2">${rec.reason}</p>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                  <span class="badge text-white" style="background:var(--gradient);font-size:0.75rem">Confidence: ${Math.round((rec.confidence || 0.8) * 100)}%</span>
+                </div>
+              </div>
+            </div>`).join('');
+        }
+      } catch (err) {
+        console.warn('AI recommendations load failed:', err);
+      }
+    }
+
     // Init
-    loadCategories().then(loadFoods);
+    loadCategories().then(() => {
+      loadFoods();
+      loadAIRecommendations();
+    });
   </script>
 </body>
 </html>

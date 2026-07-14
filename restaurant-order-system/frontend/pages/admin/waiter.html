@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waiter Dashboard — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="admin-layout"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../../js/api.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/admin.js"></script>
+  <script>
+    if (!Admin.requireAdmin()) throw new Error('Unauthorized');
+
+    document.getElementById('admin-layout').innerHTML = Admin.layout('waiter', `
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="mb-0 fw-bold">Waiter Assistance Board</h4>
+          <p class="text-muted small mb-0">Live customer requests and table service management</p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" id="refresh-waiter">
+          <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
+      </div>
+
+      <div class="row g-4">
+        <!-- Live Table Requests Alert Board -->
+        <div class="col-lg-8">
+          <div class="glass-card no-hover p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-bell me-2 text-danger"></i>Active Table Requests</h5>
+            <div class="row g-3" id="requests-list">
+              <div class="col-12 text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div> Monitoring customer requests...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- My Assigned Tables list -->
+        <div class="col-lg-4">
+          <div class="glass-card no-hover p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-border-all me-2 text-primary"></i>My Tables (Shift)</h5>
+            <ul class="list-group list-group-flush" id="my-tables-list">
+              <li class="list-group-item text-center text-muted py-3">No tables assigned yet.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    `);
+
+    async function loadWaiterDashboard() {
+      const reqList = document.getElementById('requests-list');
+      const tableList = document.getElementById('my-tables-list');
+
+      try {
+        const [reqRes, tablesRes] = await Promise.all([
+          API.getWaiterRequests(),
+          API.request('/waiter/tables')
+        ]);
+
+        const requests = reqRes.data || [];
+        const tables = tablesRes.data || [];
+
+        // Render Active Table Requests
+        if (requests.length === 0) {
+          reqList.innerHTML = '<div class="col-12 text-center text-muted py-5"><i class="fa-solid fa-circle-check fa-3x mb-3 text-success"></i><h5>Service board clear!</h5><p class="small">No active table calls or bill requests.</p></div>';
+        } else {
+          reqList.innerHTML = requests.map(r => {
+            const icons = {
+              water: 'fa-glass-water text-info',
+              bill: 'fa-receipt text-warning',
+              tissue: 'fa-box text-secondary',
+              assistance: 'fa-bell text-danger',
+              food_ready: 'fa-utensils text-success'
+            };
+            return `
+              <div class="col-md-6" id="req-card-${r.id}">
+                <div class="p-3 rounded-4 border d-flex flex-column" style="background:var(--bg-card)">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="badge bg-primary">Table ${r.table_number || 'T-XX'}</span>
+                    <span class="small text-muted">${new Date(r.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="fa-solid ${icons[r.request_type] || 'fa-bell'} fa-lg"></i>
+                    <strong>Request: ${r.request_type.toUpperCase()}</strong>
+                  </div>
+                  ${r.message ? `<p class="small text-muted mb-3">${r.message}</p>` : ''}
+                  <button class="btn btn-success btn-sm w-100 mt-auto" onclick="resolveRequest(${r.id})">
+                    <i class="fa-solid fa-check me-1"></i>Mark Resolved
+                  </button>
+                </div>
+              </div>`;
+          }).join('');
+        }
+
+        // Render Assigned Tables
+        if (tables.length === 0) {
+          tableList.innerHTML = '<li class="list-group-item text-center text-muted py-3">No tables assigned to you this shift.</li>';
+        } else {
+          tableList.innerHTML = tables.map(t => `
+            <li class="list-group-item d-flex justify-content-between align-items-center" style="background:transparent;border-color:var(--border)">
+              <div>
+                <strong>Table ${t.table_number}</strong>
+                <div class="text-muted small">${t.table_type.toUpperCase()} · Capacity ${t.capacity}</div>
+              </div>
+              <span class="badge bg-${t.status === 'available' ? 'success' : (t.status === 'occupied' ? 'danger' : 'warning')}">${t.status}</span>
+            </li>`).join('');
+        }
+
+      } catch (err) {
+        reqList.innerHTML = `<div class="col-12 text-center text-danger py-4">${err.message}</div>`;
+      }
+    }
+
+    async function resolveRequest(id) {
+      try {
+        await API.resolveWaiterRequest(id);
+        Utils.showToast('Request marked resolved', 'success');
+        loadWaiterDashboard();
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    }
+
+    document.getElementById('refresh-waiter').addEventListener('click', loadWaiterDashboard);
+
+    // Load and poll
+    loadWaiterDashboard();
+    setInterval(loadWaiterDashboard, 5000);
+  </script>
+</body>
+</html>
