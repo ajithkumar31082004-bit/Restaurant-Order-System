@@ -276,12 +276,17 @@
           method: 'PUT',
           body: JSON.stringify({ name, phone })
         });
-        localStorage.setItem('user', JSON.stringify(res.user));
+        // Backend returns { success, message, user }
+        const updatedUser = res.user || res.data;
+        // Merge with existing stored user data
+        const existing = Utils.getUser() || {};
+        const merged = { ...existing, ...updatedUser };
+        localStorage.setItem('user', JSON.stringify(merged));
         Utils.showToast('Profile updated successfully!', 'success');
         
         // Refresh display
-        document.getElementById('user-profile-name').textContent = res.user.name;
-        document.getElementById('user-avatar-initials').textContent = Utils.getAvatarInitials(res.user.name);
+        document.getElementById('user-profile-name').textContent = merged.name;
+        document.getElementById('user-avatar-initials').textContent = Utils.getAvatarInitials(merged.name);
       } catch (err) {
         Utils.showToast(err.message || 'Update failed', 'error');
       } finally {

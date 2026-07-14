@@ -48,7 +48,10 @@ const userController = {
   // Add to favorites
   async addFavorite(req, res, next) {
     try {
-      const { foodId } = req.params;
+      const { foodId } = req.body;
+      if (!foodId) {
+        return res.status(400).json({ success: false, message: 'foodId is required' });
+      }
       const [exists] = await pool.execute('SELECT * FROM favorites WHERE user_id = ? AND food_id = ?', [req.user.id, foodId]);
       if (exists.length > 0) {
         return res.json({ success: true, message: 'Food item is already favorited' });

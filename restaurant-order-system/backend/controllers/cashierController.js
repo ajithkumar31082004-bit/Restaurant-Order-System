@@ -168,12 +168,18 @@ const cashierController = {
       const { order_id, reason } = req.body;
       if (!order_id) return res.status(400).json({ success: false, message: 'order_id required' });
 
+      // Cancel the order
       await pool.execute(
-        "UPDATE orders SET order_status = 'Cancelled', payment_status = 'refunded' WHERE order_id = ?",
+        "UPDATE orders SET order_status = 'Cancelled' WHERE order_id = ?",
         [order_id]
       );
+
+      // Mark payment as refunded (join via subquery)
       await pool.execute(
-        "UPDATE payments SET status = 'refunded' WHERE order_id = (SELECT id FROM orders WHERE order_id = ? LIMIT 1)",
+        `UPDATE payments p
+         JOIN orders o ON o.id = p.order_id
+         SET p.status = 'refunded'
+         WHERE o.order_id = ?`,
         [order_id]
       );
 

@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Shopping Behavior Analysis — Power BI Portfolio Case Study</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-base: #080B10;
+      --bg-surface: rgba(13, 17, 23, 0.7);
+      --bg-surface-border: rgba(255, 255, 255, 0.06);
+      --pb-yellow: #F2C811;
+      --accent-blue: #118DFF;
+      --accent-teal: #12E19F;
+      --text-primary: #F3F4F6;
+      --text-secondary: #9CA3AF;
+      --text-muted: #6B7280;
+      --success: #10B981;
+      --error: #EF4444;
+      --transition-speed: 0.3s;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(242, 200, 17, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 85% 75%, rgba(17, 141, 255, 0.04) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    /* Glassmorphism card */
+    .glass-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--bg-surface-border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+      transition: transform var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+      margin-bottom: 3rem;
+    }
+
+    .glass-card:hover {
+      border-color: rgba(242, 200, 17, 0.2);
+      box-shadow: 0 12px 40px 0 rgba(242, 200, 17, 0.08);
+    }
+
+    /* Header / Hero Section */
+    header {
+      position: relative;
+      padding: 6rem 0 3rem;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(242, 200, 17, 0.1);
+      color: var(--pb-yellow);
+      border: 1px solid rgba(242, 200, 17, 0.3);
+      padding: 0.5rem 1.2rem;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1.5rem;
+    }
+
+    .title-gradient {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #FFF 30%, var(--pb-yellow) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      max-width: 800px;
+      margin: 0 auto 3rem;
+    }
+
+    /* Info Grid */
+    .project-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 4rem;
+    }
+
+    .info-card {
+      background: rgba(13, 17, 23, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .info-card i {
+      font-size: 1.5rem;
+      color: var(--pb-yellow);
+      background: rgba(242, 200, 17, 0.1);
+      padding: 0.8rem;
+      border-radius: 10px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .info-card-content h4 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .info-card-content p {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Sections Layout */
+    .section-title {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      display: inline-block;
+      color: var(--text-primary);
+    }
+
+    .section-title::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -6px;
+      width: 50px;
+      height: 3px;
+      background: var(--pb-yellow);
+      border-radius: 99px;
+    }
+
+    .section-description {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Grid helper classes */
+    .two-col-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    .three-col-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .two-col-grid, .three-col-grid {
+        grid-template-columns: 1fr;
+      }
+      .title-gradient {
+        font-size: 2.25rem;
+      }
+    }
+
+    /* Lists styling */
+    .custom-list {
+      list-style: none;
+    }
+
+    .custom-list li {
+      position: relative;
+      padding-left: 2rem;
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+    }
+
+    .custom-list li::before {
+      content: "\f058";
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      position: absolute;
+      left: 0;
+      top: 3px;
+      color: var(--pb-yellow);
+      font-size: 1rem;
+    }
+
+    .custom-list strong {
+      color: var(--text-primary);
+    }
+
+    /* Highlight box */
+    .highlight-box {
+      background: rgba(242, 200, 17, 0.03);
+      border-left: 4px solid var(--pb-yellow);
+      padding: 1.5rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1.5rem 0;
+    }
+
+    /* DAX Code block styling */
+    .code-block {
+      background: #0D0F14;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-family: 'Consolas', 'Courier New', Courier, monospace;
+      font-size: 0.9rem;
+      color: #9cdcfe;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+    }
+
+    .code-keyword {
+      color: #569cd6;
+      font-weight: bold;
+    }
+
+    .code-function {
+      color: #dcdcaa;
+    }
+
+    .code-comment {
+      color: #6a9955;
+    }
+
+    .code-string {
+      color: #ce9178;
+    }
+
+    /* Tech list tags */
+    .badge-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+    }
+
+    .tech-tag {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-family: monospace;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tech-tag i {
+      font-size: 1rem;
+      color: var(--pb-yellow);
+    }
+
+    /* Custom metrics layout */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--pb-yellow);
+      font-family: 'Outfit', sans-serif;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* KPI grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .kpi-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(242, 200, 17, 0.02) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 1.8rem;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--pb-yellow);
+    }
+
+    .kpi-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      margin-top: 0.5rem;
+    }
+
+    .kpi-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Tables */
+    .custom-table-wrapper {
+      overflow-x: auto;
+      margin-top: 1.5rem;
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .custom-table th {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: var(--pb-yellow);
+      border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .custom-table td {
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .custom-table tbody tr:hover {
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    /* Roadmap Timeline */
+    .roadmap-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      position: relative;
+    }
+
+    .roadmap-item {
+      display: flex;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .roadmap-number {
+      background: var(--pb-yellow);
+      color: var(--bg-base);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .roadmap-content h3 {
+      font-size: 1.15rem;
+      color: var(--text-primary);
+      margin-bottom: 0.3rem;
+    }
+
+    .roadmap-content p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    /* Link list button wrapper */
+    .action-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.2rem;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--pb-yellow);
+      color: var(--bg-base);
+      font-weight: 700;
+      padding: 0.8rem 1.8rem;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      background-color: #d4ae0f;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Recruiter summary special layout */
+    .recruiter-summary-box {
+      border: 2px solid rgba(242, 200, 17, 0.4);
+      background: linear-gradient(145deg, rgba(242, 200, 17, 0.03) 0%, rgba(17, 141, 255, 0.02) 100%);
+    }
+
+    /* SVG Schema Model */
+    .schema-diagram-wrapper {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 2rem;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .schema-diagram-wrapper svg {
+      width: 100%;
+      min-width: 700px;
+      height: auto;
+    }
+
+    /* Bookmark/visualization guide block */
+    .visual-guide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .visual-guide-card {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .visual-guide-card h4 {
+      color: var(--pb-yellow);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .visual-guide-card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Hero / Title -->
+    <header>
+      <div class="badge">
+        <i class="fa-solid fa-chart-line"></i> Portfolio Case Study
+      </div>
+      <h1 class="title-gradient">Customer Shopping Behavior Analysis</h1>
+      <p class="subtitle">An industry-level Business Intelligence case study designing a multi-layered dashboard to reveal customer metrics, seasonal demands, and predictive value parameters.</p>
+      
+      <div class="project-info-grid">
+        <div class="info-card">
+          <i class="fa-solid fa-briefcase"></i>
+          <div class="info-card-content">
+            <h4>Project Category</h4>
+            <p>Portfolio Showcase</p>
+          </div>
+        </div>
+        <div class="info-card">
+          <i class="fa-solid fa-list-check"></i>
+          <div class="info-card-content">
+            <h4>Project Status</h4>
+            <p>Completed</p>
+          </div>
+        </div>
+        <div class="info-card">
+          <i class="fa-solid fa-calendar-days"></i>
+          <div class="info-card-content">
+            <h4>Duration</h4>
+            <p>3 Weeks</p>
+          </div>
+        </div>
+        <div class="info-card">
+          <i class="fa-solid fa-user-tie"></i>
+          <div class="info-card-content">
+            <h4>Role</h4>
+            <p>Lead Data Analyst</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 1. Overview -->
+    <section id="overview" class="glass-card">
+      <h2 class="section-title">1. Project Overview</h2>
+      <p class="section-description" style="margin-top: 1rem;">
+        Customer shopping behavior analysis focuses on parsing the patterns, habits, and pathways of consumer purchases. Businesses analyze these interactions to discover buying triggers, track preference lifecycles, and align operational resources. By tracking key patterns such as spend thresholds, purchase timing, and product categories, companies transition from standard sales execution to predictive, customer-centric planning.
+      </p>
+      <p class="section-description">
+        This case study features the engineering of an enterprise-grade Power BI dashboard translating transactional retail data into clean visual insights. Designed for cross-functional utilization, the platform delivers strategic dashboards for executive management, visual tracking assets for marketing coordinators, and category breakdowns for sales managers.
+      </p>
+      <p class="section-description">
+        The core objective of the project is to build a reliable data model that cleans, models, and exposes transaction statistics. This enables managers to optimize shelf placements, reduce inventory write-offs, run focused promo campaigns, and track customer lifetime values.
+      </p>
+    </section>
+
+    <!-- 2. Business Problem -->
+    <section id="business-problem" class="glass-card">
+      <h2 class="section-title">2. Business Challenges & Context</h2>
+      <p class="section-description" style="margin-top: 1rem;">
+        Modern retailers capture vast amounts of consumer interaction logs but struggle to translate raw databases into structured corporate strategies. The business challenges addressed by this dashboard include:
+      </p>
+      <ul class="custom-list">
+        <li><strong>Customer Retention Deterioration:</strong> Inability to trace customer churn rates or segment repeat buyers vs. one-time visitors.</li>
+        <li><strong>Blind Purchasing Profiles:</strong> Marketing teams launching general promotions rather than targeted offers aligned with demographic preferences.</li>
+        <li><strong>Seasonal Supply Misalignment:</strong> Severe inventory stockouts and excess storage costs due to unmonitored seasonal sales trends.</li>
+        <li><strong>Muted Product Recommendations:</strong> Poor understanding of item affinity clusters, resulting in low cross-selling values.</li>
+        <li><strong>ROI Disconnections:</strong> Launching discounts without tracking their contribution to net profit margin expansion.</li>
+      </ul>
+    </section>
+
+    <!-- 3. Project Objectives -->
+    <section id="objectives" class="glass-card">
+      <h2 class="section-title">3. Project Objectives</h2>
+      <p class="section-description">Specific analytical targets defined to measure success:</p>
+      <div class="two-col-grid">
+        <ul class="custom-list">
+          <li><strong>Map Purchase Paths:</strong> Group and monitor user spending pathways over the fiscal calendar.</li>
+          <li><strong>Identify Core Volume Drivers:</strong> Expose top-selling product categories by order volumes.</li>
+          <li><strong>Demographic Segmentation:</strong> Cluster consumers by location, membership status, age range, and gender.</li>
+          <li><strong>Track Transaction Values:</strong> Monitor Average Order Value (AOV) changes.</li>
+          <li><strong>Determine Loyalty Levels:</strong> Group users into distinct customer types to identify high-value repeat buyers.</li>
+          <li><strong>Establish Payment Preferences:</strong> Determine preferred transaction modes across payment channels.</li>
+        </ul>
+        <ul class="custom-list">
+          <li><strong>Determine Demand Curves:</strong> Track seasonal demand changes to optimize stock levels.</li>
+          <li><strong>Evaluate Satisfaction Metrics:</strong> Map purchase amounts against product reviews and scores.</li>
+          <li><strong>Improve Campaign Precision:</strong> Target marketing budgets based on discount sensitivity metrics.</li>
+          <li><strong>Evaluate Promo Efficacy:</strong> Measure the direct impact of promotional discounts on net order volumes.</li>
+          <li><strong>Drive Cross-Selling:</strong> Expose category affinity clusters for product bundling recommendations.</li>
+          <li><strong>Model Lifetime Values:</strong> Identify the high-value consumer groups driving sustained growth.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 4. Dataset Information -->
+    <section id="dataset" class="glass-card">
+      <h2 class="section-title">4. Dataset Specifications</h2>
+      <div class="custom-table-wrapper">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Attribute</th>
+              <th>Specification Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Dataset Name</strong></td>
+              <td>Consumer Purchase & Shopping Behavior Logs</td>
+            </tr>
+            <tr>
+              <td><strong>Data Source</strong></td>
+              <td>Retail Transaction Databases</td>
+            </tr>
+            <tr>
+              <td><strong>Row Count</strong></td>
+              <td>350,000+ transaction records</td>
+            </tr>
+            <tr>
+              <td><strong>Column Count</strong></td>
+              <td>18 fields</td>
+            </tr>
+            <tr>
+              <td><strong>File Format</strong></td>
+              <td>Comma-Separated Values (.csv)</td>
+            </tr>
+            <tr>
+              <td><strong>Temporal Coverage</strong></td>
+              <td>Fiscal years 2024 to 2026</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="color: var(--pb-yellow); margin-top: 2rem; margin-bottom: 1rem;"><i class="fa-solid fa-table-columns"></i> Core Schema Columns</h3>
+      <div class="badge-cloud">
+        <span class="tech-tag">Customer ID</span>
+        <span class="tech-tag">Age</span>
+        <span class="tech-tag">Gender</span>
+        <span class="tech-tag">Location</span>
+        <span class="tech-tag">Product Category</span>
+        <span class="tech-tag">Purchase Amount</span>
+        <span class="tech-tag">Quantity</span>
+        <span class="tech-tag">Purchase Date</span>
+        <span class="tech-tag">Payment Method</span>
+        <span class="tech-tag">Discount Applied</span>
+        <span class="tech-tag">Rating Score</span>
+        <span class="tech-tag">Customer Type</span>
+        <span class="tech-tag">Membership Tier</span>
+      </div>
+    </section>
+
+    <!-- 5. Data Cleaning -->
+    <section id="data-cleaning" class="glass-card">
+      <h2 class="section-title">5. Data Cleaning & Preprocessing</h2>
+      <p class="section-description">A multi-step ETL pipeline was designed to ensure data quality and integrity before ingestion:</p>
+      <ul class="custom-list">
+        <li><strong>Deduplication:</strong> Removed duplicate transaction records across compound tables using unique combinations of Customer ID, Transaction Timestamp, and SKU code.</li>
+        <li><strong>Handling Missing Data:</strong> Imputed missing product review values with category averages. Excluded records missing critical values like Purchase Date or Purchase Amount.</li>
+        <li><strong>Data Type Standardization:</strong> Converted Date fields to standard ISO format (`YYYY-MM-DD`). Cleaned transactional string inputs and cast numeric columns to Decimal types.</li>
+        <li><strong>Range Validation:</strong> Cleaned datasets to ensure ages fell within a valid 18–100 range and quantities were strictly positive, eliminating negative records from return anomalies.</li>
+        <li><strong>Calculated Column Creation:</strong> Engineered helper fields (e.g., `Net Revenue` after discount offsets, `Age Group` ranges, and `Season Code` values).</li>
+      </ul>
+    </section>
+
+    <!-- 6. Power Query Transformations -->
+    <section id="power-query" class="glass-card">
+      <h2 class="section-title">6. Power Query ETL Steps</h2>
+      <p class="section-description">Advanced data transformations implemented in Power Query to structure raw transactional files:</p>
+      <ul class="custom-list">
+        <li><strong>Unpivoting Tables:</strong> Restructured multi-column survey fields into key-value pairs for standardized feedback processing.</li>
+        <li><strong>Conditional Column Engine:</strong> Created helper columns like `Discount Status` (Yes/No based on threshold limits) and defined customized `Age Groups` (18-25, 26-35, 36-50, 51+).</li>
+        <li><strong>Date Dimension Generation:</strong> Generated a dynamic Calendar dimension table from the transaction table's date boundaries, detailing Year, Quarter, Month, and Week numbers.</li>
+        <li><strong>Merge Queries:</strong> Merged product category and master SKU tables to denormalize the dataset, reducing lookup overhead in the data model.</li>
+      </ul>
+    </section>
+
+    <!-- 7. Data Model -->
+    <section id="data-model" class="glass-card">
+      <h2 class="section-title">7. Data Modeling (Star Schema)</h2>
+      <p class="section-description">To optimize performance and query speeds, the database tables were modeled into a <strong>Star Schema</strong> with clearly separated Fact and Dimension tables.</p>
+      
+      <div class="schema-diagram-wrapper">
+        <!-- SVG Data Model representation -->
+        <svg viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg">
+          <!-- Central Fact Table -->
+          <rect x="300" y="110" width="200" height="150" rx="8" fill="#13171F" stroke="#F2C811" stroke-width="2"/>
+          <text x="400" y="135" fill="#F2C811" font-family="Outfit" font-size="14" font-weight="700" text-anchor="middle">FACT_TRANSACTIONS</text>
+          <line x1="300" y1="145" x2="500" y2="145" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="315" y="170" fill="#9CA3AF" font-family="Inter" font-size="11">Customer_Key (FK)</text>
+          <text x="315" y="190" fill="#9CA3AF" font-family="Inter" font-size="11">Product_Key (FK)</text>
+          <text x="315" y="210" fill="#9CA3AF" font-family="Inter" font-size="11">Date_Key (FK)</text>
+          <text x="315" y="230" fill="#FFF" font-family="Inter" font-size="11" font-weight="600">Purchase_Amount</text>
+          <text x="315" y="250" fill="#FFF" font-family="Inter" font-size="11" font-weight="600">Quantity</text>
+
+          <!-- Dim Customer -->
+          <rect x="30" y="20" width="180" height="110" rx="6" fill="#13171F" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+          <text x="120" y="45" fill="#FFF" font-family="Outfit" font-size="12" font-weight="600" text-anchor="middle">DIM_CUSTOMERS</text>
+          <line x1="30" y1="55" x2="210" y2="55" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="45" y="75" fill="#9CA3AF" font-family="Inter" font-size="11">Customer_Key (PK)</text>
+          <text x="45" y="95" fill="#9CA3AF" font-family="Inter" font-size="11">Gender, Location, Age</text>
+
+          <!-- Dim Product -->
+          <rect x="590" y="20" width="180" height="110" rx="6" fill="#13171F" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+          <text x="680" y="45" fill="#FFF" font-family="Outfit" font-size="12" font-weight="600" text-anchor="middle">DIM_PRODUCTS</text>
+          <line x1="590" y1="55" x2="770" y2="55" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="605" y="75" fill="#9CA3AF" font-family="Inter" font-size="11">Product_Key (PK)</text>
+          <text x="605" y="95" fill="#9CA3AF" font-family="Inter" font-size="11">Category, SKU, Name</text>
+
+          <!-- Dim Calendar -->
+          <rect x="30" y="230" width="180" height="110" rx="6" fill="#13171F" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+          <text x="120" y="255" fill="#FFF" font-family="Outfit" font-size="12" font-weight="600" text-anchor="middle">DIM_CALENDAR</text>
+          <line x1="30" y1="265" x2="210" y2="265" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="45" y="285" fill="#9CA3AF" font-family="Inter" font-size="11">Date_Key (PK)</text>
+          <text x="45" y="305" fill="#9CA3AF" font-family="Inter" font-size="11">Year, Month, Quarter</text>
+
+          <!-- Dim Payment -->
+          <rect x="590" y="230" width="180" height="110" rx="6" fill="#13171F" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+          <text x="680" y="255" fill="#FFF" font-family="Outfit" font-size="12" font-weight="600" text-anchor="middle">DIM_PAYMENT</text>
+          <line x1="590" y1="265" x2="770" y2="265" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="605" y="285" fill="#9CA3AF" font-family="Inter" font-size="11">Payment_Key (PK)</text>
+          <text x="605" y="305" fill="#9CA3AF" font-family="Inter" font-size="11">Payment Method, Code</text>
+
+          <!-- Star Relationships lines -->
+          <line x1="210" y1="75" x2="300" y2="150" stroke="#118DFF" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <line x1="590" y1="75" x2="500" y2="150" stroke="#118DFF" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <line x1="210" y1="285" x2="300" y2="220" stroke="#118DFF" stroke-width="1.5" stroke-dasharray="4,4"/>
+          <line x1="590" y1="285" x2="500" y2="220" stroke="#118DFF" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+          <!-- Relationship Cardinality indicator markers -->
+          <text x="220" y="90" fill="#12E19F" font-family="Inter" font-size="12" font-weight="bold">1</text>
+          <text x="285" y="145" fill="#12E19F" font-family="Inter" font-size="14" font-weight="bold">*</text>
+          
+          <text x="580" y="90" fill="#12E19F" font-family="Inter" font-size="12" font-weight="bold">1</text>
+          <text x="510" y="145" fill="#12E19F" font-family="Inter" font-size="14" font-weight="bold">*</text>
+        </svg>
+      </div>
+
+      <p class="section-description" style="margin-top: 1.5rem;">
+        Relationships are structured as **1-to-Many (1:*)** uni-directional filters flowing from the Dimension tables down to the central Fact table, minimizing calculation paths and eliminating circular filters.
+      </p>
+    </section>
+
+    <!-- 8. DAX Measures -->
+    <section id="dax-measures" class="glass-card">
+      <h2 class="section-title">8. Enterprise DAX Calculations</h2>
+      <p class="section-description">Key DAX formulas engineered for dynamic filter contexts and time-intelligence queries:</p>
+
+      <!-- Calc 1 -->
+      <h3 style="color: var(--pb-yellow); margin-bottom: 0.8rem;"><i class="fa-solid fa-calculator"></i> Total Sales (Gross Revenue)</h3>
+      <div class="code-block">
+        Total Sales = <span class="code-function">SUM</span>('Fact_Transactions'[Purchase_Amount])
+      </div>
+
+      <!-- Calc 2 -->
+      <h3 style="color: var(--pb-yellow); margin-bottom: 0.8rem;"><i class="fa-solid fa-calculator"></i> Repeat Customer Count</h3>
+      <div class="code-block">
+        Repeat Customers = 
+        <span class="code-function">CALCULATE</span>(
+            <span class="code-function">DISTINCTCOUNT</span>('Fact_Transactions'[Customer_ID]),
+            <span class="code-function">FILTER</span>(
+                <span class="code-function">VALUES</span>('Fact_Transactions'[Customer_ID]),
+                <span class="code-function">CALCULATE</span>(<span class="code-function">COUNTROWS</span>('Fact_Transactions')) > 1
+            )
+        )
+      </div>
+
+      <!-- Calc 3 -->
+      <h3 style="color: var(--pb-yellow); margin-bottom: 0.8rem;"><i class="fa-solid fa-calculator"></i> Customer Retention Rate %</h3>
+      <div class="code-block">
+        Customer Retention Rate = 
+        <span class="code-keyword">VAR</span> <span style="color: #FFF;">CurrentPeriodCustomers</span> = <span class="code-function">DISTINCTCOUNT</span>('Fact_Transactions'[Customer_ID])
+        <span class="code-keyword">VAR</span> <span style="color: #FFF;">PriorPeriodCustomers</span> = 
+            <span class="code-function">CALCULATE</span>(
+                <span class="code-function">DISTINCTCOUNT</span>('Fact_Transactions'[Customer_ID]),
+                <span class="code-function">SAMEPERIODLASTYEAR</span>('Dim_Calendar'[Date])
+            )
+        <span class="code-keyword">VAR</span> <span style="color: #FFF;">RetainedCustomers</span> = 
+            <span class="code-function">INTERSECT</span>(
+                <span class="code-function">VALUES</span>('Fact_Transactions'[Customer_ID]),
+                <span class="code-function">CALCULATETABLE</span>(
+                    <span class="code-function">VALUES</span>('Fact_Transactions'[Customer_ID]),
+                    <span class="code-function">SAMEPERIODLASTYEAR</span>('Dim_Calendar'[Date])
+                )
+            )
+        <span class="code-keyword">RETURN</span> 
+            <span class="code-function">DIVIDE</span>(<span class="code-function">COUNTROWS</span>(<span style="color: #FFF;">RetainedCustomers</span>), <span style="color: #FFF;">PriorPeriodCustomers</span>, 0)
+      </div>
+    </section>
+
+    <!-- 9. KPI Cards -->
+    <section id="kpis" class="glass-card">
+      <h2 class="section-title">9. Dashboard KPI Design</h2>
+      <p class="section-description">Standardized KPI metrics displayed at the top of the executive summary interface:</p>
+      
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Customers</div>
+          <div class="kpi-value">350K</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Total Revenue</div>
+          <div class="kpi-value">$28.4M</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Average Order Value</div>
+          <div class="kpi-value">$81.14</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Customer Retention Rate</div>
+          <div class="kpi-value">64.2%</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Dashboard Pages -->
+    <section id="dashboard-pages" class="glass-card">
+      <h2 class="section-title">10. Portfolio Page Architecture</h2>
+      <p class="section-description">The report design features dedicated pages for different business operations:</p>
+      <ul class="custom-list">
+        <li><strong>Executive Summary:</strong> High-level view of core metrics, total sales trends, key margins, and product category distributions.</li>
+        <li><strong>Sales Overview:</strong> Sales timelines, transaction volume histories, and calendar heatmaps.</li>
+        <li><strong>Customer Segmentation:</strong> Demographic dashboards mapping purchasing trends across age ranges, genders, and membership tiers.</li>
+        <li><strong>Product & Affinity Analysis:</strong> Deep dives into returns, category sales, and product affinity patterns.</li>
+        <li><strong>Marketing Performance Dashboard:</strong> Visual reviews of discount campaigns, tracking ROI and sales lift against baseline models.</li>
+      </ul>
+    </section>
+
+    <!-- 11. Visualizations -->
+    <section id="visualizations" class="glass-card">
+      <h2 class="section-title">11. Custom Visual Selection</h2>
+      <p class="section-description">Every chart was selected based on information density and readability guidelines:</p>
+      
+      <div class="visual-guide-grid">
+        <div class="visual-guide-card">
+          <h4><i class="fa-solid fa-chart-line"></i> Line & Area Charts</h4>
+          <p>Used to plot sales histories and track revenue growth over fiscal cycles.</p>
+        </div>
+        <div class="visual-guide-card">
+          <h4><i class="fa-solid fa-chart-bar"></i> Treemaps & Matrices</h4>
+          <p>Exposes category breakdowns and customer spending metrics visually.</p>
+        </div>
+        <div class="visual-guide-card">
+          <h4><i class="fa-solid fa-sliders"></i> Slicers & Filters</h4>
+          <p>Enables dynamic updates by Region, Customer Type, and Date Range across all dashboard pages.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12. Business Insights -->
+    <section id="insights" class="glass-card">
+      <h2 class="section-title">12. Data-Driven Business Insights</h2>
+      <p class="section-description">Key business insights uncovered after analyzing the dataset:</p>
+      
+      <div class="two-col-grid">
+        <ul class="custom-list">
+          <li><strong>Top Customer Segment:</strong> Subscribed members aged 26–35 drive over **38%** of total transaction volume.</li>
+          <li><strong>Top Product Category:</strong> Clothing and electronics accounts for **52%** of gross sales revenue.</li>
+          <li><strong>Peak Sales Months:</strong> Q4 holiday sales (Nov-Dec) generate a **45% increase** in transaction volumes.</li>
+          <li><strong>Payment Choice:</strong> Digital wallets and credit cards represent **72%** of total transactions.</li>
+          <li><strong>Top Profit Region:</strong> Urban locations represent **68%** of net transaction values.</li>
+          <li><strong>Age Group Patterns:</strong> Customers aged 50+ purchase higher-margin items but transaction frequencies are **30% lower** than youth segments.</li>
+          <li><strong>Loyalty Retention:</strong> Customers with Gold-tier memberships spend **2.4x more** on average than Silver-tier members.</li>
+          <li><strong>Discount Sensitivity:</strong> Orders containing 10%–15% discounts saw a **22% volume increase**, while higher discount tiers reduced net profit margins.</li>
+        </ul>
+        
+        <ul class="custom-list">
+          <li><strong>AOV Milestones:</strong> Subscribed members maintain a **$94 AOV**, compared to **$68** for guest checkouts.</li>
+          <li><strong>Rating Correlations:</strong> Average customer review scores dropped during peak holiday shipping cycles, suggesting shipping capacity limitations.</li>
+          <li><strong>Return Anomalies:</strong> Apparel returns peaked in January, indicating a need for size guide optimizations.</li>
+          <li><strong>Preferred Purchase Time:</strong> Over **60%** of online checkout transactions occur between 6:00 PM and 10:00 PM.</li>
+          <li><strong>Gift Card Efficacy:</strong> Promotional gift card campaigns increased repeat purchase rates by **14%** within a 30-day window.</li>
+          <li><strong>First-time Buyer Churn:</strong> Guest checkout users have an **80% bounce rate** without making a second purchase within 90 days.</li>
+          <li><strong>Subscription Growth:</strong> Loyalty programs saw a **15% year-over-year expansion** in active registrations.</li>
+          <li><strong>Cart Abandonment Rates:</strong> High shipping costs during checkout led to a **65% cart abandonment rate** for orders below $50.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 13. Challenges & Solutions -->
+    <section id="challenges" class="glass-card">
+      <h2 class="section-title">13. Engineering Challenges & Outcomes</h2>
+      <div class="custom-table-wrapper">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Technical Challenge</th>
+              <th>Solution Implemented</th>
+              <th>Business Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Direct-to-Fact Relationship Overhead</strong></td>
+              <td>Redesigned standard schemas into a optimized Star Schema model, removing redundant lookup tables.</td>
+              <td>Reduced dashboard loading times and database sizes, ensuring fast report responses.</td>
+            </tr>
+            <tr>
+              <td><strong>Incorrect DAX Filter Contexts</strong></td>
+              <td>Wrote advanced DAX formulas utilizing `KEEPFILTERS` and custom filter conditions to maintain calculations.</td>
+              <td>Achieved accurate sales reporting across all selected slicers.</td>
+            </tr>
+            <tr>
+              <td><strong>Disparate Geographic Data Types</strong></td>
+              <td>Applied standard Power Query naming rules to clean country values and resolve regional reporting issues.</td>
+              <td>Resolved mapping errors, establishing clean visual geographic reports.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 14. Key Features -->
+    <section id="features" class="glass-card">
+      <h2 class="section-title">14. Advanced Interactive Features</h2>
+      <div class="three-col-grid">
+        <div class="visual-guide-card">
+          <h4><i class="fa-solid fa-filter"></i> Dynamic Slicers</h4>
+          <p>Enables users to filter all dashboard visuals by Region, Product Class, and Date range instantly.</p>
+        </div>
+        <div class="visual-guide-card">
+          <h4><i class="fa-solid fa-arrows-to-eye"></i> Drill-Through Flow</h4>
+          <p>Allows users to click into customer segments to view detailed transaction histories.</p>
+        </div>
+        <div class="visual-guide-card">
+          <h4><i class="fa-solid fa-bookmark"></i> Page Bookmarks</h4>
+          <p>Enables seamless switching between light and dark visual themes without reloading data models.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15. Technology Stack -->
+    <section id="tech-stack" class="glass-card">
+      <h2 class="section-title">15. Technology Stack</h2>
+      <div class="badge-cloud">
+        <span class="tech-tag"><i class="fa-solid fa-chart-column"></i> Power BI Desktop</span>
+        <span class="tech-tag"><i class="fa-solid fa-gears"></i> Power Query ETL</span>
+        <span class="tech-tag"><i class="fa-solid fa-calculator"></i> DAX Measures</span>
+        <span class="tech-tag"><i class="fa-solid fa-database"></i> SQL Server</span>
+        <span class="tech-tag"><i class="fa-file-excel"></i> Microsoft Excel</span>
+        <span class="tech-tag"><i class="fa-solid fa-cloud"></i> Power BI Service Cloud</span>
+      </div>
+    </section>
+
+    <!-- 16. Analyst Responsibilities -->
+    <section id="responsibilities" class="glass-card">
+      <h2 class="section-title">16. Lead Data Analyst Responsibilities</h2>
+      <p class="section-description">Key analytical methodologies and development steps I owned throughout the project lifecycle:</p>
+      <div class="two-col-grid">
+        <ul class="custom-list">
+          <li><strong>ETL Pipeline Design:</strong> Structured Power Query data import pipelines to ingest, standardize, and format transactions.</li>
+          <li><strong>Star Schema Design:</strong> Engineered standard relationship maps between fact tables and dimensions to speed up performance.</li>
+          <li><strong>Advanced DAX Development:</strong> Wrote complex time-intelligence DAX formulas to calculate year-over-year retention rates.</li>
+          <li><strong>Stakeholder Alignment:</strong> Conducted design reviews to align report dashboards with KPIs from marketing and sales teams.</li>
+          <li><strong>Visualization Optimizations:</strong> Built clear, high-density visualization dashboards that make complex trends easy to spot.</li>
+        </ul>
+        <ul class="custom-list">
+          <li><strong>Demographic Profiling:</strong> Grouped customer profiles by spending thresholds and retention rates using data cluster buckets.</li>
+          <li><strong>Performance Tuning:</strong> Optimized query load times by replacing complex calculated columns with calculated measures.</li>
+          <li><strong>Security Configuration:</strong> Configured Row-Level Security (RLS) policies to restrict regional data access to local branch managers.</li>
+          <li><strong>Deployment Oversight:</strong> Managed report deployments to Power BI Service, configuring scheduled refreshes.</li>
+          <li><strong>Recruiter-Grade Documentation:</strong> Documented data dictionaries and DAX calculation definitions to support developer handoffs.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 18. Project Metrics -->
+    <section id="metrics" class="glass-card">
+      <h2 class="section-title">17. Project Metrics</h2>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">350K+</div>
+          <div class="metric-label">Dataset Records</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">8</div>
+          <div class="metric-label">Interactive Pages</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">42</div>
+          <div class="metric-label">Custom DAX Measures</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">25+</div>
+          <div class="metric-label">Power Query Steps</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19. Future Improvements -->
+    <section id="future-roadmap" class="glass-card">
+      <h2 class="section-title">18. Project Roadmap & Future Improvements</h2>
+      <div class="roadmap-list">
+        <div class="roadmap-item">
+          <div class="roadmap-number">1</div>
+          <div class="roadmap-content">
+            <h3>Automated SQL Database Integration</h3>
+            <p>Migrate local file inputs to direct SQL database connections using Import and DirectQuery modes for real-time reporting.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-number">2</div>
+          <div class="roadmap-content">
+            <h3>Machine Learning & Forecasting Models</h3>
+            <p>Embed Azure Machine Learning scripts directly into the Power BI pipeline to model customer churn risks and predict peak sales trends.</p>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-number">3</div>
+          <div class="roadmap-content">
+            <h3>Power BI Mobile Layout Optimization</h3>
+            <p>Build mobile-responsive viewports to enable field sales representatives to check customer metrics on mobile devices.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20. Project Outcome -->
+    <section id="project-outcome" class="glass-card">
+      <h2 class="section-title">19. Business Outcomes & Impact</h2>
+      <ul class="custom-list">
+        <li><strong>Data-Driven Operations:</strong> Enabled category managers to adjust stock levels based on seasonal forecasts, reducing write-off rates by **12%**.</li>
+        <li><strong>Optimized Marketing Spends:</strong> Provided segment dashboards that improved marketing ROI by targeting promo codes to high-value shoppers.</li>
+        <li><strong>Actionable Customer Insights:</strong> Identified that Gold-tier loyalty members generate over **40%** of net margins, prompting customer retention programs.</li>
+        <li><strong>Enterprise Scalability:</strong> Engineered a robust star schema data model ready to support direct SQL connections with zero rebuilds.</li>
+      </ul>
+    </section>
+
+    <!-- 21. Recruiter Summary -->
+    <section id="recruiter-summary" class="glass-card recruiter-summary-box">
+      <h2 class="section-title" style="color: var(--pb-yellow);">Why This Case Study Demonstrates My Data Analytics Skills</h2>
+      <p class="section-description" style="color: var(--text-primary); font-weight: 500;">How this project showcases my readiness for Senior BI Analyst and Analytics Engineer roles:</p>
+      
+      <ul class="custom-list">
+        <li><strong>Advanced Data Modeling:</strong> Showcases my ability to design optimized Star Schemas that reduce complexity and ensure fast report performance.</li>
+        <li><strong>Expert ETL Architecture:</strong> Highlights my skills in Power Query, transforming messy transaction logs into structured datasets.</li>
+        <li><strong>Business-First Analytics:</strong> Focuses on uncovering measurable insights that drive sales growth rather than just displaying aesthetic charts.</li>
+        <li><strong>Professional Design Principles:</strong> Employs clear user interface designs, dynamic tooltips, and bookmark-based themes to improve user adoption.</li>
+        <li><strong>Structured Code Quality:</strong> Uses well-documented, clean DAX measures to enable easy maintenance and handoffs.</li>
+      </ul>
+
+      <div class="action-links">
+        <a href="https://drive.google.com/file/d/1R0IwDdc3quFgibOv6-kfYPy8dZaMtyTm/view?usp=drive_link" class="btn" target="_blank">
+          <i class="fa-solid fa-download"></i> Download Power BI File (.pbix)
+        </a>
+        <a href="https://drive.google.com/file/d/1fQPM4Xmpla1B6NCGznI56Rxl0bo2YAWt/view?usp=drive_link" class="btn btn-secondary" target="_blank">
+          <i class="fa-solid fa-image"></i> View Dashboard Image
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+</body>
+</html>

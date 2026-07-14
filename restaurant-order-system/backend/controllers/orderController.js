@@ -240,6 +240,7 @@ const orderController = {
           orderId: order.order_id,
           currentStatus: order.order_status,
           estimatedDelivery: order.estimated_delivery,
+          paymentMethod: order.payment_method,
           timeline
         }
       });

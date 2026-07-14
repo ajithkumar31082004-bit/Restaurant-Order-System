@@ -146,13 +146,13 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE TABLE IF NOT EXISTS order_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
-    food_id INT NOT NULL,
+    food_id INT DEFAULT NULL,
     food_name VARCHAR(150) NOT NULL,
     quantity INT NOT NULL,
     unit_price DECIMAL(10, 2) NOT NULL,
     total_price DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE RESTRICT,
+    FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE SET NULL,
     INDEX idx_order_items_order (order_id)
 );
 

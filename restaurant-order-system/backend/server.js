@@ -102,8 +102,6 @@ app.use('/api/analytics',    analyticsRoutes);
 app.use('/api/cashier',      cashierRoutes);
 app.use('/api/ai',           aiRoutes);
 
-app.use(errorHandler);
-
 app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ success: false, message: 'API endpoint not found' });
@@ -113,39 +111,39 @@ app.use((req, res) => {
   const cleanPath = req.path.replace(/\/$/, ''); // Remove trailing slash
   const pageMap = {
     // Existing pages
-    '/menu':            '../frontend/pages/menu.html',
-    '/login':           '../frontend/pages/login.html',
-    '/register':        '../frontend/pages/register.html',
-    '/cart':            '../frontend/pages/cart.html',
-    '/checkout':        '../frontend/pages/checkout.html',
-    '/profile':         '../frontend/pages/profile.html',
-    '/track-order':     '../frontend/pages/track-order.html',
-    '/contact':         '../frontend/pages/contact.html',
-    '/order-success':   '../frontend/pages/order-success.html',
+    '/menu':            '/pages/menu.html',
+    '/login':           '/pages/login.html',
+    '/register':        '/pages/register.html',
+    '/cart':            '/pages/cart.html',
+    '/checkout':        '/pages/checkout.html',
+    '/profile':         '/pages/profile.html',
+    '/track-order':     '/pages/track-order.html',
+    '/contact':         '/pages/contact.html',
+    '/order-success':   '/pages/order-success.html',
     // New customer pages
-    '/reservation':     '../frontend/pages/reservation.html',
-    '/reservation-confirm': '../frontend/pages/reservation-confirm.html',
-    '/table-order':     '../frontend/pages/table-order.html',
-    '/bill':            '../frontend/pages/bill.html',
-    '/feedback':        '../frontend/pages/feedback.html',
-    '/loyalty':         '../frontend/pages/loyalty.html',
-    '/group-order':     '../frontend/pages/group-order.html',
-    '/scheduled-order': '../frontend/pages/scheduled-order.html',
+    '/reservation':     '/pages/reservation.html',
+    '/reservation-confirm': '/pages/reservation-confirm.html',
+    '/table-order':     '/pages/table-order.html',
+    '/bill':            '/pages/bill.html',
+    '/feedback':        '/pages/feedback.html',
+    '/loyalty':         '/pages/loyalty.html',
+    '/group-order':     '/pages/group-order.html',
+    '/scheduled-order': '/pages/scheduled-order.html',
     // Admin pages
-    '/admin':                   '../frontend/pages/admin/dashboard.html',
-    '/admin/dashboard':         '../frontend/pages/admin/dashboard.html',
-    '/admin/floor-map':         '../frontend/pages/admin/floor-map.html',
-    '/admin/tables':            '../frontend/pages/admin/tables.html',
-    '/admin/reservations':      '../frontend/pages/admin/reservations.html',
-    '/admin/kitchen':           '../frontend/pages/admin/kitchen.html',
-    '/admin/waiter':            '../frontend/pages/admin/waiter.html',
-    '/admin/cashier':           '../frontend/pages/admin/cashier.html',
-    '/admin/inventory':         '../frontend/pages/admin/inventory.html',
-    '/admin/analytics':         '../frontend/pages/admin/analytics.html',
-    '/admin/employees':         '../frontend/pages/admin/employees.html',
-    '/admin/feedback':          '../frontend/pages/admin/feedback.html',
-    '/admin/waitlist':          '../frontend/pages/admin/waitlist.html',
-    '/admin/ai-insights':       '../frontend/pages/admin/ai-insights.html',
+    '/admin':                   '/pages/admin/dashboard.html',
+    '/admin/dashboard':         '/pages/admin/dashboard.html',
+    '/admin/floor-map':         '/pages/admin/floor-map.html',
+    '/admin/tables':            '/pages/admin/tables.html',
+    '/admin/reservations':      '/pages/admin/reservations.html',
+    '/admin/kitchen':           '/pages/admin/kitchen.html',
+    '/admin/waiter':            '/pages/admin/waiter.html',
+    '/admin/cashier':           '/pages/admin/cashier.html',
+    '/admin/inventory':         '/pages/admin/inventory.html',
+    '/admin/analytics':         '/pages/admin/analytics.html',
+    '/admin/employees':         '/pages/admin/employees.html',
+    '/admin/feedback':          '/pages/admin/feedback.html',
+    '/admin/waitlist':          '/pages/admin/waitlist.html',
+    '/admin/ai-insights':       '/pages/admin/ai-insights.html',
   };
 
   if (pageMap[cleanPath]) {
@@ -159,6 +157,9 @@ app.use((req, res) => {
 
   res.redirect('/pages/index.html');
 });
+
+// ── Error Handler (must be after all routes) ──────────────────
+app.use(errorHandler);
 
 // ── Crash Protection ──────────────────────────────────────────
 process.on('unhandledRejection', (reason) => {

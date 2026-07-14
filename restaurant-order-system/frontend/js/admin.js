@@ -47,7 +47,7 @@ const Admin = {
       <!-- Sidebar -->
       <aside class="admin-sidebar" id="adminSidebar">
         <div class="sidebar-brand">
-          <a href="../../index.html" class="navbar-brand" style="font-size:1.25rem">
+          <a href="/pages/index.html" class="navbar-brand" style="font-size:1.25rem">
             <i class="fa-solid fa-utensils"></i> FoodHub
           </a>
           <div class="mt-1 text-muted" style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:1px">Admin Panel</div>
@@ -89,7 +89,7 @@ const Admin = {
             <div class="theme-toggle" onclick="Theme && Theme.toggle()" title="Toggle theme">
               <i class="fa-solid fa-moon" id="theme-icon"></i>
             </div>
-            <a href="../../frontend/pages/index.html" target="_blank" class="btn btn-sm" style="background:var(--primary-light);color:var(--primary);border:none;border-radius:8px;font-weight:600;font-size:0.8rem">
+            <a href="/pages/index.html" target="_blank" class="btn btn-sm" style="background:var(--primary-light);color:var(--primary);border:none;border-radius:8px;font-weight:600;font-size:0.8rem">
               <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>View Site
             </a>
           </div>

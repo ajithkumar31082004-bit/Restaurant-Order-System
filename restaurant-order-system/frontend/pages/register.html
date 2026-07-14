@@ -212,7 +212,7 @@
 
       Utils.showLoader(true);
       try {
-        await API.register({ name, email, phone, password, confirmPassword: password });
+        await API.register({ name, email, phone, password, confirmPassword: confirmPwd });
         Utils.showToast('Account created successfully! Please login.', 'success');
         
         setTimeout(() => {
