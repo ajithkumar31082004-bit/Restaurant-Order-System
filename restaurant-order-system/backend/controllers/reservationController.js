@@ -1,6 +1,5 @@
 const Reservation = require('../models/Reservation');
 const Table = require('../models/Table');
-const pool = require('../config/database');
 
 const reservationController = {
 
@@ -118,21 +117,14 @@ const reservationController = {
         return res.status(400).json({ success: false, message: 'Invalid status' });
       }
 
-      // Find by DB id
-      const [rows] = await pool.execute(
-        'SELECT * FROM table_reservations WHERE id = ? OR reservation_id = ?',
-        [req.params.id, req.params.id]
-      );
-      if (!rows[0]) return res.status(404).json({ success: false, message: 'Reservation not found' });
+      const reservation = await Reservation.findByReservationId(req.params.id) || await Reservation.findById(req.params.id);
+      if (!reservation) return res.status(404).json({ success: false, message: 'Reservation not found' });
 
-      const reservation = rows[0];
       const updated = await Reservation.updateStatus(reservation.id, status, req.user?.id);
 
-      // Release the table when reservation is completed/cancelled/no-show
       if (['completed','cancelled','no-show'].includes(status) && reservation.table_id) {
         await Table.updateStatus(reservation.table_id, 'available');
       }
-      // Mark table occupied when seated
       if (status === 'seated' && reservation.table_id) {
         await Table.updateStatus(reservation.table_id, 'occupied');
       }
