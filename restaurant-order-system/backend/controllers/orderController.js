@@ -5,6 +5,102 @@ const { sendOrderToSQS, sendOrderNotification } = require('../aws/sqs');
 const { uploadToS3, getPresignedUrl, objectExists } = require('../aws/s3');
 const PDFDocument = require('pdfkit');
 
+// ── Helper: build the PDF in memory ───────────────────────────────────
+function buildPdfBuffer(order) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50 });
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    // Header
+    doc.fontSize(22).font('Helvetica-Bold').text('🍽  FoodHub Restaurant', { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text('Tax Invoice / Bill of Supply', { align: 'center' });
+    doc.moveDown();
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    // Order details
+    doc.font('Helvetica-Bold').text('Order Details', { underline: true });
+    doc.font('Helvetica');
+    doc.text(`Order ID   : ${order.order_id}`);
+    doc.text(`Date       : ${new Date(order.created_at).toLocaleString('en-IN')}`);
+    doc.text(`Order Type : ${(order.order_type || 'delivery').toUpperCase()}`);
+    doc.text(`Status     : ${order.order_status}`);
+    doc.moveDown();
+
+    // Customer details
+    doc.font('Helvetica-Bold').text('Customer Details', { underline: true });
+    doc.font('Helvetica');
+    doc.text(`Name       : ${order.customer_name}`);
+    doc.text(`Phone      : ${order.customer_phone}`);
+    if (order.customer_email) doc.text(`Email      : ${order.customer_email}`);
+    if (order.order_type !== 'dine-in') {
+      doc.text(`Address    : ${order.delivery_address}, ${order.city} - ${order.pincode}`);
+    } else if (order.table_id) {
+      doc.text(`Table      : T-${String(order.table_id).padStart(2, '0')}`);
+    }
+    doc.moveDown();
+
+    // Items table
+    doc.font('Helvetica-Bold').text('Items Ordered', { underline: true });
+    doc.font('Helvetica');
+    order.items.forEach((item, i) => {
+      doc.text(
+        `${i + 1}. ${item.food_name}  ×${item.quantity}` +
+        `    @₹${item.unit_price || (item.total_price / item.quantity).toFixed(2)}` +
+        `    = ₹${item.total_price}`
+      );
+    });
+    doc.moveDown();
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    // Totals
+    doc.text(`Subtotal          : ₹${order.subtotal}`);
+    doc.text(`GST (5%)          : ₹${order.gst_amount}`);
+    if (order.delivery_charge > 0)
+      doc.text(`Delivery Charge   : ₹${order.delivery_charge}`);
+    if (order.service_charge > 0)
+      doc.text(`Service Charge    : ₹${order.service_charge}`);
+    if (order.discount_amount > 0)
+      doc.text(`Discount          : -₹${order.discount_amount}`);
+    if (order.tip_amount > 0)
+      doc.text(`Tip               : ₹${order.tip_amount}`);
+    doc.font('Helvetica-Bold').fontSize(14);
+    doc.text(`GRAND TOTAL       : ₹${order.total_amount}`);
+    doc.font('Helvetica').fontSize(12);
+    doc.text(`Payment Method    : ${order.payment_method}`);
+    doc.moveDown();
+
+    // Footer
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(0.5);
+    doc.fontSize(10).text('Thank you for dining with FoodHub! 🙏', { align: 'center' });
+    doc.text('For support: info@foodhub.com  |  +91 98765 43210', { align: 'center' });
+
+    doc.end();
+  });
+}
+
+// ── Background Uploader helper ────────────────────────────────────────
+async function uploadInvoiceBackground(order) {
+  const s3Key = `invoices/invoice-${order.order_id}.pdf`;
+  try {
+    const alreadyUploaded = await objectExists(s3Key);
+    if (!alreadyUploaded) {
+      const pdfBuffer = await buildPdfBuffer(order);
+      await uploadToS3(pdfBuffer, s3Key, 'application/pdf');
+      console.log(`[Auto-Trigger] Invoice successfully uploaded to S3: ${s3Key}`);
+    } else {
+      console.log(`[Auto-Trigger] Invoice already exists in S3, skipping: ${s3Key}`);
+    }
+  } catch (err) {
+    console.error(`[Auto-Trigger] S3 invoice upload failed in background:`, err.message);
+  }
+}
+
 const orderController = {
   async create(req, res, next) {
     try {
@@ -111,6 +207,11 @@ const orderController = {
         console.error('SNS notification failed:', snsErr.message);
       }
 
+      // Asynchronously trigger PDF generation and upload to S3 in the background
+      uploadInvoiceBackground(order).catch(err => {
+        console.error('Background S3 upload trigger failed:', err.message);
+      });
+
       res.status(201).json({
         success: true,
         message: 'Order placed successfully',
@@ -205,91 +306,12 @@ const orderController = {
 
       const s3Key = `invoices/invoice-${order.order_id}.pdf`;
 
-      // ── Helper: build the PDF in memory ───────────────────────────────────
-      const buildPdfBuffer = () =>
-        new Promise((resolve, reject) => {
-          const doc = new PDFDocument({ margin: 50 });
-          const chunks = [];
-          doc.on('data', (chunk) => chunks.push(chunk));
-          doc.on('end', () => resolve(Buffer.concat(chunks)));
-          doc.on('error', reject);
-
-          // ── Header ──────────────────────────────────────────────────────────
-          doc.fontSize(22).font('Helvetica-Bold').text('🍽  FoodHub Restaurant', { align: 'center' });
-          doc.fontSize(12).font('Helvetica').text('Tax Invoice / Bill of Supply', { align: 'center' });
-          doc.moveDown();
-          doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-          doc.moveDown(0.5);
-
-          // ── Order meta ──────────────────────────────────────────────────────
-          doc.font('Helvetica-Bold').text('Order Details', { underline: true });
-          doc.font('Helvetica');
-          doc.text(`Order ID   : ${order.order_id}`);
-          doc.text(`Date       : ${new Date(order.created_at).toLocaleString('en-IN')}`);
-          doc.text(`Order Type : ${(order.order_type || 'delivery').toUpperCase()}`);
-          doc.text(`Status     : ${order.order_status}`);
-          doc.moveDown();
-
-          // ── Customer info ───────────────────────────────────────────────────
-          doc.font('Helvetica-Bold').text('Customer Details', { underline: true });
-          doc.font('Helvetica');
-          doc.text(`Name       : ${order.customer_name}`);
-          doc.text(`Phone      : ${order.customer_phone}`);
-          if (order.customer_email) doc.text(`Email      : ${order.customer_email}`);
-          if (order.order_type !== 'dine-in') {
-            doc.text(`Address    : ${order.delivery_address}, ${order.city} - ${order.pincode}`);
-          } else if (order.table_id) {
-            doc.text(`Table      : T-${String(order.table_id).padStart(2, '0')}`);
-          }
-          doc.moveDown();
-
-          // ── Items table ─────────────────────────────────────────────────────
-          doc.font('Helvetica-Bold').text('Items Ordered', { underline: true });
-          doc.font('Helvetica');
-          order.items.forEach((item, i) => {
-            doc.text(
-              `${i + 1}. ${item.food_name}  ×${item.quantity}` +
-              `    @₹${item.unit_price || (item.total_price / item.quantity).toFixed(2)}` +
-              `    = ₹${item.total_price}`
-            );
-          });
-          doc.moveDown();
-          doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-          doc.moveDown(0.5);
-
-          // ── Totals ──────────────────────────────────────────────────────────
-          const right = { align: 'right' };
-          doc.text(`Subtotal          : ₹${order.subtotal}`);
-          doc.text(`GST (5%)          : ₹${order.gst_amount}`);
-          if (order.delivery_charge > 0)
-            doc.text(`Delivery Charge   : ₹${order.delivery_charge}`);
-          if (order.service_charge > 0)
-            doc.text(`Service Charge    : ₹${order.service_charge}`);
-          if (order.discount_amount > 0)
-            doc.text(`Discount          : -₹${order.discount_amount}`);
-          if (order.tip_amount > 0)
-            doc.text(`Tip               : ₹${order.tip_amount}`);
-          doc.font('Helvetica-Bold').fontSize(14);
-          doc.text(`GRAND TOTAL       : ₹${order.total_amount}`);
-          doc.font('Helvetica').fontSize(12);
-          doc.text(`Payment Method    : ${order.payment_method}`);
-          doc.moveDown();
-
-          // ── Footer ──────────────────────────────────────────────────────────
-          doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-          doc.moveDown(0.5);
-          doc.fontSize(10).text('Thank you for dining with FoodHub! 🙏', { align: 'center' });
-          doc.text('For support: info@foodhub.com  |  +91 98765 43210', { align: 'center' });
-
-          doc.end();
-        });
-
       // ── Try S3 upload ──────────────────────────────────────────────────────
       try {
         // Re-use existing S3 object to avoid regenerating the same invoice
         const alreadyUploaded = await objectExists(s3Key);
         if (!alreadyUploaded) {
-          const pdfBuffer = await buildPdfBuffer();
+          const pdfBuffer = await buildPdfBuffer(order);
           await uploadToS3(pdfBuffer, s3Key, 'application/pdf');
           console.log(`Invoice uploaded to S3: ${s3Key}`);
         } else {
@@ -301,7 +323,7 @@ const orderController = {
       } catch (s3Err) {
         // ── S3 not configured or failed — fall back to direct stream ─────────
         console.warn('S3 invoice upload failed, falling back to stream:', s3Err.message);
-        const pdfBuffer = await buildPdfBuffer();
+        const pdfBuffer = await buildPdfBuffer(order);
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.order_id}.pdf`);
         return res.send(pdfBuffer);
