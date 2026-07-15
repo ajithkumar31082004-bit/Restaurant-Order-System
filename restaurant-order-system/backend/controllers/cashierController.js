@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const PDFDocument = require('pdfkit');
 const Order = require('../models/Order');
+const { uploadToS3, getPresignedUrl, objectExists } = require('../aws/s3');
 
 const cashierController = {
 
@@ -59,83 +60,109 @@ const cashierController = {
       const order = await Order.findByOrderId(req.params.orderId);
       if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-      const serviceCharge = Math.round(parseFloat(order.subtotal) * 0.10 * 100) / 100;
-      const grandTotal = parseFloat(order.total_amount) + serviceCharge;
+      const s3Key = `invoices/bill-${order.order_id}.pdf`;
 
-      const doc = new PDFDocument({ margin: 50, size: 'A4' });
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=bill-${order.order_id}.pdf`);
-      doc.pipe(res);
+      const buildPdfBuffer = () =>
+        new Promise((resolve, reject) => {
+          const doc = new PDFDocument({ margin: 50, size: 'A4' });
+          const chunks = [];
+          doc.on('data', chunk => chunks.push(chunk));
+          doc.on('end', () => resolve(Buffer.concat(chunks)));
+          doc.on('error', reject);
 
-      // Header
-      doc.fontSize(22).fillColor('#ff6b35').text('FoodHub Restaurant', { align: 'center' });
-      doc.fontSize(10).fillColor('#666').text('Smart Restaurant Management System', { align: 'center' });
-      doc.moveDown(0.5);
-      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ff6b35').lineWidth(2).stroke();
-      doc.moveDown(0.5);
+          const serviceCharge = Math.round(parseFloat(order.subtotal) * 0.10 * 100) / 100;
+          const grandTotal = parseFloat(order.total_amount) + serviceCharge;
 
-      // Order info
-      doc.fontSize(12).fillColor('#333');
-      doc.text(`Bill / GST Invoice`, { align: 'center', underline: true });
-      doc.moveDown(0.3);
-      doc.fontSize(10);
-      doc.text(`Order ID: ${order.order_id}`, { continued: true });
-      doc.text(`  |  Date: ${new Date(order.created_at).toLocaleString('en-IN')}`, { align: 'right' });
-      doc.text(`Customer: ${order.customer_name}`, { continued: true });
-      doc.text(`  |  Phone: ${order.customer_phone}`, { align: 'right' });
-      if (order.table_number) doc.text(`Table: ${order.table_number}`);
-      doc.text(`Order Type: ${order.order_type || 'delivery'}`);
-      doc.moveDown(0.5);
+          // Header
+          doc.fontSize(22).fillColor('#ff6b35').text('FoodHub Restaurant', { align: 'center' });
+          doc.fontSize(10).fillColor('#666').text('Smart Restaurant Management System', { align: 'center' });
+          doc.moveDown(0.5);
+          doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ff6b35').lineWidth(2).stroke();
+          doc.moveDown(0.5);
 
-      // Items table header
-      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').lineWidth(1).stroke();
-      doc.moveDown(0.2);
-      doc.fontSize(10).fillColor('#ff6b35');
-      doc.text('Item', 50, doc.y, { width: 250 });
-      doc.text('Qty', 300, doc.y - doc.currentLineHeight(), { width: 50 });
-      doc.text('Price', 350, doc.y - doc.currentLineHeight(), { width: 80 });
-      doc.text('Total', 430, doc.y - doc.currentLineHeight(), { width: 100, align: 'right' });
-      doc.moveDown(0.2);
-      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+          // Order info
+          doc.fontSize(12).fillColor('#333');
+          doc.text(`Bill / GST Invoice`, { align: 'center', underline: true });
+          doc.moveDown(0.3);
+          doc.fontSize(10);
+          doc.text(`Order ID: ${order.order_id}`, { continued: true });
+          doc.text(`  |  Date: ${new Date(order.created_at).toLocaleString('en-IN')}`, { align: 'right' });
+          doc.text(`Customer: ${order.customer_name}`, { continued: true });
+          doc.text(`  |  Phone: ${order.customer_phone}`, { align: 'right' });
+          if (order.table_number) doc.text(`Table: ${order.table_number}`);
+          doc.text(`Order Type: ${order.order_type || 'delivery'}`);
+          doc.moveDown(0.5);
 
-      doc.fillColor('#333');
-      order.items.forEach(item => {
-        doc.moveDown(0.2);
-        const y = doc.y;
-        doc.text(item.food_name, 50, y, { width: 245 });
-        doc.text(`${item.quantity}`, 300, y, { width: 45 });
-        doc.text(`₹${item.unit_price}`, 350, y, { width: 75 });
-        doc.text(`₹${item.total_price}`, 430, y, { width: 100, align: 'right' });
-      });
+          // Items table header
+          doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').lineWidth(1).stroke();
+          doc.moveDown(0.2);
+          doc.fontSize(10).fillColor('#ff6b35');
+          doc.text('Item', 50, doc.y, { width: 250 });
+          doc.text('Qty', 300, doc.y - doc.currentLineHeight(), { width: 50 });
+          doc.text('Price', 350, doc.y - doc.currentLineHeight(), { width: 80 });
+          doc.text('Total', 430, doc.y - doc.currentLineHeight(), { width: 100, align: 'right' });
+          doc.moveDown(0.2);
+          doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
 
-      doc.moveDown(0.5);
-      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
-      doc.moveDown(0.3);
+          doc.fillColor('#333');
+          order.items.forEach(item => {
+            doc.moveDown(0.2);
+            const y = doc.y;
+            doc.text(item.food_name, 50, y, { width: 245 });
+            doc.text(`${item.quantity}`, 300, y, { width: 45 });
+            doc.text(`₹${item.unit_price}`, 350, y, { width: 75 });
+            doc.text(`₹${item.total_price}`, 430, y, { width: 100, align: 'right' });
+          });
 
-      // Totals
-      const addLine = (label, value, color = '#333', bold = false) => {
-        doc.fontSize(bold ? 12 : 10).fillColor(color);
-        doc.text(label, 350, doc.y, { continued: true });
-        doc.text(`₹${parseFloat(value).toFixed(2)}`, { align: 'right' });
-      };
+          doc.moveDown(0.5);
+          doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+          doc.moveDown(0.3);
 
-      addLine('Subtotal:', order.subtotal);
-      addLine(`GST (5%):`, order.gst_amount);
-      if (order.delivery_charge > 0) addLine('Delivery:', order.delivery_charge);
-      if (order.discount_amount > 0) addLine('Discount:', `-${order.discount_amount}`, '#28a745');
-      if (order.tip_amount > 0) addLine('Tip:', order.tip_amount);
-      addLine('Service Charge (10%):', serviceCharge);
-      doc.moveDown(0.2);
-      doc.moveTo(350, doc.y).lineTo(545, doc.y).strokeColor('#ff6b35').lineWidth(1.5).stroke();
-      doc.moveDown(0.2);
-      addLine('GRAND TOTAL:', grandTotal, '#ff6b35', true);
+          // Totals
+          const addLine = (label, value, color = '#333', bold = false) => {
+            doc.fontSize(bold ? 12 : 10).fillColor(color);
+            doc.text(label, 350, doc.y, { continued: true });
+            doc.text(`₹${parseFloat(value).toFixed(2)}`, { align: 'right' });
+          };
 
-      doc.moveDown(0.5);
-      doc.text(`Payment: ${order.payment_method}  |  Status: ${order.payment_status}`, { align: 'center', color: '#666' });
-      doc.moveDown(1);
-      doc.fontSize(9).fillColor('#999').text('Thank you for dining with us! Please visit again.', { align: 'center' });
+          addLine('Subtotal:', order.subtotal);
+          addLine(`GST (5%):`, order.gst_amount);
+          if (order.delivery_charge > 0) addLine('Delivery:', order.delivery_charge);
+          if (order.discount_amount > 0) addLine('Discount:', `-${order.discount_amount}`, '#28a745');
+          if (order.tip_amount > 0) addLine('Tip:', order.tip_amount);
+          addLine('Service Charge (10%):', serviceCharge);
+          doc.moveDown(0.2);
+          doc.moveTo(350, doc.y).lineTo(545, doc.y).strokeColor('#ff6b35').lineWidth(1.5).stroke();
+          doc.moveDown(0.2);
+          addLine('GRAND TOTAL:', grandTotal, '#ff6b35', true);
 
-      doc.end();
+          doc.moveDown(0.5);
+          doc.text(`Payment: ${order.payment_method}  |  Status: ${order.payment_status}`, { align: 'center', color: '#666' });
+          doc.moveDown(1);
+          doc.fontSize(9).fillColor('#999').text('Thank you for dining with us! Please visit again.', { align: 'center' });
+
+          doc.end();
+        });
+
+      try {
+        const alreadyUploaded = await objectExists(s3Key);
+        if (!alreadyUploaded) {
+          const pdfBuffer = await buildPdfBuffer();
+          await uploadToS3(pdfBuffer, s3Key, 'application/pdf');
+          console.log(`Cashier bill PDF uploaded to S3: ${s3Key}`);
+        } else {
+          console.log(`Cashier bill PDF already in S3: ${s3Key}`);
+        }
+
+        const presignedUrl = await getPresignedUrl(s3Key, 3600);
+        return res.redirect(presignedUrl);
+      } catch (s3Err) {
+        console.warn('S3 cashier invoice upload failed, streaming directly:', s3Err.message);
+        const pdfBuffer = await buildPdfBuffer();
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=bill-${order.order_id}.pdf`);
+        return res.send(pdfBuffer);
+      }
     } catch (err) { next(err); }
   },
 
