@@ -19,6 +19,31 @@
     </div>
   </div>
 
+  <section class="pt-4 pb-2">
+    <div class="container">
+      <div class="glass-card no-hover p-3">
+        <div class="row align-items-center g-3">
+          <div class="col-md-6">
+            <div class="d-flex align-items-center gap-3">
+              <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:var(--primary-light);color:var(--primary)">
+                <i class="fa-solid fa-chair"></i>
+              </div>
+              <div>
+                <div class="fw-bold">Welcome to <span id="table-welcome-label">Table T-01</span></div>
+                <div class="small text-muted">Choose your meal, add it to the cart, and send it to the kitchen.</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 text-md-end">
+            <span class="badge rounded-pill bg-success-subtle text-success" id="table-status-chip">
+              <i class="fa-solid fa-circle-check me-1"></i>Ready for order
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Waiter Call Panel -->
   <section class="pt-4 pb-2">
     <div class="container">
@@ -58,6 +83,16 @@
             <div class="row" id="menu-items-grid">
               <!-- Dynamically populated -->
             </div>
+            <div class="mt-3 small text-muted" id="table-order-hint">Tip: Use the search box to find your meal quickly.</div>
+            <div class="mt-4 p-4 rounded-4 border text-center" style="background:linear-gradient(135deg, var(--bg-card), rgba(255,107,53,0.05));">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-qrcode me-2"></i>Table QR Preview</div>
+              <div class="small text-muted mb-3">Scan this QR to open the same dine-in ordering page on your phone.</div>
+              <img id="table-qr-preview" alt="Table QR code" class="img-fluid rounded-3 shadow-sm" style="max-width:220px;width:100%" />
+              <div class="mt-3 d-flex justify-content-center gap-2 flex-wrap">
+                <button class="btn btn-sm btn-primary-custom" onclick="downloadQrCode()"><i class="fa-solid fa-download me-2"></i>Download QR</button>
+                <a class="btn btn-sm btn-outline-secondary" href="restaurant-experience.html"><i class="fa-solid fa-map me-2"></i>View Floor Map</a>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -84,6 +119,9 @@
             <div class="d-flex justify-content-between fs-5 mb-4" style="color:var(--primary)">
               <strong>Total</strong>
               <strong id="cart-total">₹0.00</strong>
+            </div>
+            <div class="alert alert-light border mb-3 py-2 px-3 small mb-3" role="alert">
+              <i class="fa-solid fa-info-circle me-2"></i>Orders placed here go directly to the kitchen and are tagged to this table.
             </div>
 
             <!-- Customer Details for Order -->
@@ -133,6 +171,26 @@
     const params = new URLSearchParams(window.location.search);
     const tableNumber = params.get('table') || 'T-01';
     document.getElementById('table-label').textContent = `Table ${tableNumber}`;
+    document.getElementById('table-welcome-label').textContent = `Table ${tableNumber}`;
+
+    function renderTableQr(tableName) {
+      const img = document.getElementById('table-qr-preview');
+      const url = `http://localhost:3000/pages/table-order.html?table=${encodeURIComponent(tableName)}`;
+      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+      img.dataset.url = url;
+    }
+
+    function downloadQrCode() {
+      const img = document.getElementById('table-qr-preview');
+      const link = document.createElement('a');
+      link.href = img.src;
+      link.download = `${tableNumber.replace(/[^a-zA-Z0-9]/g, '_') || 'table'}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    renderTableQr(tableNumber);
 
     let tableId = 1;
     let menuItems = [];
@@ -168,6 +226,15 @@
         const matchedTable = (tablesRes.data || []).find(t => t.table_number === tableNumber);
         if (matchedTable) {
           tableId = matchedTable.id;
+          const chip = document.getElementById('table-status-chip');
+          const statusText = {
+            available: 'Ready for order',
+            occupied: 'Currently occupied',
+            reserved: 'Reserved for later',
+            cleaning: 'Under cleaning'
+          }[matchedTable.status] || 'Ready for order';
+          chip.innerHTML = `<i class="fa-solid ${matchedTable.status === 'available' ? 'fa-circle-check' : matchedTable.status === 'occupied' ? 'fa-circle-xmark' : matchedTable.status === 'reserved' ? 'fa-calendar-check' : 'fa-broom'} me-1"></i>${statusText}`;
+          chip.className = `badge rounded-pill ${matchedTable.status === 'available' ? 'bg-success-subtle text-success' : matchedTable.status === 'occupied' ? 'bg-danger-subtle text-danger' : matchedTable.status === 'reserved' ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-warning'}`;
         }
 
         const [catRes, foodRes] = await Promise.all([

@@ -37,6 +37,10 @@ const Components = {
           <ul class="navbar-nav mx-auto gap-1">
             <li class="nav-item"><a class="nav-link ${activePage === 'home' ? 'active' : ''}" href="index.html">Home</a></li>
             <li class="nav-item"><a class="nav-link ${activePage === 'menu' ? 'active' : ''}" href="menu.html">Menu</a></li>
+            <li class="nav-item"><a class="nav-link ${activePage === 'experience' ? 'active' : ''}" href="restaurant-experience.html">Dining</a></li>
+            <li class="nav-item"><a class="nav-link ${activePage === 'loyalty' ? 'active' : ''}" href="loyalty.html">Loyalty</a></li>
+            <li class="nav-item"><a class="nav-link ${activePage === 'feedback' ? 'active' : ''}" href="feedback.html">Feedback</a></li>
+            <li class="nav-item"><a class="nav-link ${activePage === 'bill' ? 'active' : ''}" href="bill.html">Bill</a></li>
             <li class="nav-item"><a class="nav-link" href="menu.html?offers=true">Offers</a></li>
             <li class="nav-item"><a class="nav-link" href="index.html#about">About</a></li>
             <li class="nav-item"><a class="nav-link ${activePage === 'contact' ? 'active' : ''}" href="contact.html">Contact</a></li>
@@ -101,8 +105,12 @@ const Components = {
             <h5>Quick Links</h5>
             <ul>
               <li><a href="menu.html">Menu</a></li>
+              <li><a href="restaurant-experience.html">Dining</a></li>
               <li><a href="cart.html">Cart</a></li>
               <li><a href="track-order.html">Track Order</a></li>
+              <li><a href="loyalty.html">Loyalty</a></li>
+              <li><a href="bill.html">Bill</a></li>
+              <li><a href="feedback.html">Feedback</a></li>
               <li><a href="contact.html">Contact</a></li>
               <li><a href="menu.html?offers=true">Offers</a></li>
             </ul>
