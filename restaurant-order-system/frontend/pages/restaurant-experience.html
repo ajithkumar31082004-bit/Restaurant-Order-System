@@ -4,105 +4,346 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Restaurant Experience — FoodHub</title>
+  <meta name="description" content="Reserve a table, scan QR to order, and enjoy a seamless dine-in experience at FoodHub.">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="../css/style.css" rel="stylesheet">
+  <style>
+    /* ── Experience Page Scoped Styles ───────────────────────── */
+
+    /* Hero */
+    .exp-hero {
+      background: linear-gradient(135deg, #ff6b35 0%, #ffba08 50%, #ff6b35 100%);
+      background-size: 200% 200%;
+      animation: heroGradient 8s ease infinite;
+      padding: 4rem 0 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .exp-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+    @keyframes heroGradient {
+      0%,100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .exp-hero h1 { font-size: 2.8rem; font-weight: 800; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+    .exp-hero p  { color: rgba(255,255,255,0.9); font-size: 1.15rem; }
+
+    /* Live pulse dot */
+    .live-dot {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      background: #28a745; animation: livePulse 1.5s infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes livePulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(40,167,69,0.5); }
+      50%     { box-shadow: 0 0 0 8px rgba(40,167,69,0); }
+    }
+
+    /* Stats counters row */
+    .stat-counter {
+      text-align: center; padding: 1rem;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      border-radius: 16px; border: 1px solid rgba(255,255,255,0.2);
+    }
+    .stat-counter .stat-number { font-size: 2rem; font-weight: 800; color: #fff; }
+    .stat-counter .stat-label  { font-size: 0.8rem; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Feature cards */
+    .feature-card {
+      background: var(--bg-card); border-radius: var(--radius);
+      border: 1px solid var(--border); padding: 1.5rem;
+      transition: var(--transition); cursor: pointer;
+      text-decoration: none; color: var(--text);
+      display: flex; align-items: flex-start; gap: 1rem;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px); box-shadow: var(--shadow-lg);
+      border-color: var(--primary); color: var(--text);
+    }
+    .feature-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; flex-shrink: 0;
+    }
+    .feature-card h6 { font-weight: 700; margin-bottom: 4px; }
+    .feature-card p  { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
+
+    /* Floor plan */
+    .floor-plan {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 12px; padding: 1.5rem;
+      background: var(--bg); border-radius: var(--radius);
+      border: 2px dashed var(--border); position: relative;
+    }
+    .floor-table {
+      aspect-ratio: 1; border-radius: 14px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.85rem;
+      transition: var(--transition); cursor: pointer;
+      border: 2px solid transparent; text-decoration: none;
+      position: relative;
+    }
+    .floor-table:hover { transform: scale(1.08); z-index: 2; }
+    .floor-table .table-seats { font-size: 0.7rem; font-weight: 400; opacity: 0.8; margin-top: 2px; }
+    .floor-table.available   { background: #d4edda; color: #155724; border-color: #28a74544; }
+    .floor-table.occupied    { background: #f8d7da; color: #721c24; border-color: #dc354544; }
+    .floor-table.reserved    { background: #cce5ff; color: #004085; border-color: #007bff44; }
+    .floor-table.cleaning    { background: #fff3cd; color: #856404; border-color: #ffc10744; }
+    .floor-table .status-dot {
+      position: absolute; top: 6px; right: 6px;
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .floor-table.available .status-dot { background: #28a745; animation: livePulse 1.5s infinite; }
+    .floor-table.occupied .status-dot  { background: #dc3545; }
+    .floor-table.reserved .status-dot  { background: #007bff; }
+    .floor-table.cleaning .status-dot  { background: #ffc107; }
+
+    /* Legend */
+    .floor-legend { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .floor-legend .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+    .floor-legend .legend-dot { width: 12px; height: 12px; border-radius: 4px; }
+
+    /* Today's Specials */
+    .special-card {
+      border-radius: var(--radius); overflow: hidden;
+      border: 1px solid var(--border); background: var(--bg-card);
+      transition: var(--transition);
+    }
+    .special-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .special-card .special-img {
+      height: 140px; background: linear-gradient(135deg, #ff6b3520, #ffba0820);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem;
+    }
+    .special-card .special-body { padding: 1rem; }
+    .special-card .special-price {
+      background: var(--primary); color: #fff;
+      padding: 3px 10px; border-radius: var(--radius-pill);
+      font-weight: 700; font-size: 0.85rem;
+    }
+
+    /* Waitlist queue */
+    .queue-position {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+    }
+
+    /* Entrance animations */
+    .animate-in {
+      opacity: 0; transform: translateY(24px);
+      animation: fadeInUp 0.6s forwards;
+    }
+    @keyframes fadeInUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+
+    /* QR Section */
+    .qr-display {
+      background: #fff; border-radius: 16px; padding: 1.2rem;
+      border: 2px dashed var(--border); text-align: center;
+    }
+  </style>
 </head>
 <body>
   <div id="navbar"></div>
 
-  <div class="page-header">
-    <div class="container">
-      <h1><i class="fa-solid fa-utensils me-2"></i>Restaurant Experience</h1>
-      <p>Reserve a table, order from your seat, and stay updated with live dining status.</p>
-    </div>
-  </div>
+  <!-- ── HERO ────────────────────────────────────────────────── -->
+  <section class="exp-hero">
+    <div class="container text-center position-relative" style="z-index:1">
+      <div class="mb-2">
+        <span class="badge bg-white text-dark px-3 py-2 rounded-pill shadow-sm animate-in">
+          <span class="live-dot"></span> Live Dining Experience
+        </span>
+      </div>
+      <h1 class="animate-in delay-1">🍽️ Restaurant Experience</h1>
+      <p class="animate-in delay-2 mb-4">Reserve a table, scan QR to order, and enjoy seamless dining with live updates.</p>
+      <div class="d-flex justify-content-center gap-3 flex-wrap animate-in delay-3">
+        <a href="reservation.html" class="btn btn-light btn-lg rounded-pill shadow-sm px-4">
+          <i class="fa-solid fa-calendar-days me-2"></i>Reserve a Table
+        </a>
+        <a href="table-order.html?table=T-01" class="btn btn-outline-light btn-lg rounded-pill px-4">
+          <i class="fa-solid fa-qrcode me-2"></i>Open QR Ordering
+        </a>
+      </div>
 
-  <section class="py-5">
-    <div class="container">
-      <div class="row g-4">
-        <div class="col-lg-7">
-          <div class="glass-card no-hover p-4 p-md-5">
-            <div class="d-flex align-items-center gap-2 mb-3">
-              <span class="badge" style="background:var(--primary-light);color:var(--primary)">New</span>
-              <span class="text-muted small">Dining modes for every visit</span>
-            </div>
-            <h2 class="fw-bold mb-3">Enjoy dine-in, delivery, and reservations from one smart experience.</h2>
-            <p class="text-muted mb-4">Guests can reserve a table in advance, scan a QR code to order from the table, and use live status updates to avoid waiting.</p>
-            <div class="d-flex flex-wrap gap-2">
-              <a href="reservation.html" class="btn btn-primary-custom"><i class="fa-solid fa-calendar-days me-2"></i>Reserve a Table</a>
-              <a href="table-order.html?table=T-01" class="btn btn-outline-secondary"><i class="fa-solid fa-qrcode me-2"></i>Open QR Ordering</a>
-            </div>
+      <!-- Stats counters -->
+      <div class="row g-3 mt-4 justify-content-center animate-in delay-4">
+        <div class="col-auto">
+          <div class="stat-counter">
+            <div class="stat-number" id="stat-available">—</div>
+            <div class="stat-label">Tables Free</div>
           </div>
         </div>
-
-        <div class="col-lg-5">
-          <div class="glass-card no-hover p-4">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-bolt me-2"></i>Quick Actions</h5>
-            <div class="d-grid gap-2">
-              <a href="reservation.html" class="btn btn-outline-primary w-100 text-start"><i class="fa-solid fa-calendar-check me-2"></i>Pre-book your table</a>
-              <a href="table-order.html?table=T-12" class="btn btn-outline-success w-100 text-start"><i class="fa-solid fa-qrcode me-2"></i>Scan QR to order</a>
-              <a href="bill.html" class="btn btn-outline-warning w-100 text-start"><i class="fa-solid fa-file-invoice-dollar me-2"></i>View digital bill</a>
-              <a href="loyalty.html" class="btn btn-outline-info w-100 text-start"><i class="fa-solid fa-crown me-2"></i>Join loyalty rewards</a>
-              <a href="feedback.html" class="btn btn-outline-secondary w-100 text-start"><i class="fa-solid fa-comment-dots me-2"></i>Leave feedback</a>
-              <a href="track-order.html" class="btn btn-outline-dark w-100 text-start"><i class="fa-solid fa-truck-fast me-2"></i>Track an order</a>
-            </div>
+        <div class="col-auto">
+          <div class="stat-counter">
+            <div class="stat-number" id="stat-occupied">—</div>
+            <div class="stat-label">Now Dining</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="stat-counter">
+            <div class="stat-number" id="stat-total">—</div>
+            <div class="stat-label">Total Capacity</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="stat-counter">
+            <div class="stat-number">~15<span style="font-size:0.6em">min</span></div>
+            <div class="stat-label">Avg Wait</div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="py-4" style="background:var(--glass)">
+  <!-- ── FEATURE CARDS ───────────────────────────────────────── -->
+  <section class="py-5">
+    <div class="container">
+      <div class="row g-3">
+        <div class="col-lg-4 col-md-6 animate-in delay-1">
+          <a href="reservation.html" class="feature-card h-100">
+            <div class="feature-icon" style="background:#e8f5e9;color:#2e7d32"><i class="fa-solid fa-calendar-check"></i></div>
+            <div>
+              <h6>Pre-book Your Table</h6>
+              <p>Reserve indoor, outdoor, or VIP seating in advance and skip the wait.</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-lg-4 col-md-6 animate-in delay-2">
+          <a href="table-order.html?table=T-12" class="feature-card h-100">
+            <div class="feature-icon" style="background:#fff3e0;color:#e65100"><i class="fa-solid fa-qrcode"></i></div>
+            <div>
+              <h6>Scan QR to Order</h6>
+              <p>Scan the code at your table and browse the full menu without waiting for a waiter.</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-lg-4 col-md-6 animate-in delay-3">
+          <a href="bill.html" class="feature-card h-100">
+            <div class="feature-icon" style="background:#e3f2fd;color:#1565c0"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <div>
+              <h6>View Digital Bill</h6>
+              <p>Access your itemized bill digitally and settle payment with ease.</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-lg-4 col-md-6 animate-in delay-4">
+          <a href="loyalty.html" class="feature-card h-100">
+            <div class="feature-icon" style="background:#fce4ec;color:#c62828"><i class="fa-solid fa-crown"></i></div>
+            <div>
+              <h6>Loyalty Rewards</h6>
+              <p>Collect points on every order and unlock exclusive member-only offers.</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-lg-4 col-md-6 animate-in delay-5">
+          <a href="feedback.html" class="feature-card h-100">
+            <div class="feature-icon" style="background:#f3e5f5;color:#7b1fa2"><i class="fa-solid fa-comment-dots"></i></div>
+            <div>
+              <h6>Share Feedback</h6>
+              <p>Tell us about your experience and help us serve you even better.</p>
+            </div>
+          </a>
+        </div>
+        <div class="col-lg-4 col-md-6 animate-in delay-6">
+          <a href="track-order.html" class="feature-card h-100">
+            <div class="feature-icon" style="background:#e0f2f1;color:#00695c"><i class="fa-solid fa-truck-fast"></i></div>
+            <div>
+              <h6>Track an Order</h6>
+              <p>Follow your meal in real time — from kitchen to your table or doorstep.</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FLOOR PLAN + QR + WAITLIST ──────────────────────────── -->
+  <section class="py-4" style="background:var(--bg)">
     <div class="container">
       <div class="row g-4">
-        <div class="col-lg-8">
-          <div class="glass-card no-hover p-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-              <h4 class="fw-bold mb-0"><i class="fa-solid fa-circle-dot me-2"></i>Live Table Availability</h4>
-              <span class="text-muted small">Updated from the restaurant floor plan</span>
-            </div>
-            <div class="row g-3" id="table-status-grid"></div>
 
-            <div class="mt-4">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0"><i class="fa-solid fa-map me-2"></i>Floor Map Preview</h5>
-                <span class="text-muted small">Tap a table to open the dine-in order screen</span>
-              </div>
-              <div class="row g-3" id="floor-preview-grid"></div>
+        <!-- Floor Plan -->
+        <div class="col-lg-8">
+          <div class="glass-card no-hover p-4 animate-in">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <h4 class="fw-bold mb-0">
+                <i class="fa-solid fa-map me-2"></i>Live Floor Plan
+              </h4>
+              <span class="badge bg-light text-dark rounded-pill shadow-sm">
+                <span class="live-dot"></span> Real-time
+              </span>
+            </div>
+
+            <!-- Legend -->
+            <div class="floor-legend mb-3">
+              <div class="legend-item"><div class="legend-dot" style="background:#d4edda"></div> Available</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#f8d7da"></div> Occupied</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#cce5ff"></div> Reserved</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#fff3cd"></div> Cleaning</div>
+            </div>
+
+            <div class="floor-plan" id="floor-plan-grid">
+              <!-- populated by JS -->
+            </div>
+          </div>
+
+          <!-- Today's Specials -->
+          <div class="glass-card no-hover p-4 mt-4 animate-in delay-2">
+            <h4 class="fw-bold mb-3"><i class="fa-solid fa-fire me-2 text-danger"></i>Today's Specials</h4>
+            <div class="row g-3" id="specials-grid">
+              <!-- populated by JS -->
             </div>
           </div>
         </div>
 
+        <!-- QR + Waitlist sidebar -->
         <div class="col-lg-4">
-          <div class="glass-card no-hover p-4">
-            <h4 class="fw-bold mb-3"><i class="fa-solid fa-qrcode me-2"></i>Scan to Order</h4>
+          <div class="glass-card no-hover p-4 animate-in delay-1">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-qrcode me-2"></i>Scan to Order</h5>
             <div class="mb-3">
-              <label class="form-label small">Select table</label>
+              <label class="form-label small fw-semibold">Select table</label>
               <select class="form-select" id="qr-table-select"></select>
             </div>
-            <div class="text-center p-3 rounded-4 border" style="background:var(--bg-card)">
-              <img id="qr-code-image" alt="Table QR code" class="img-fluid" style="max-width:220px; width:100%;" />
+            <div class="qr-display">
+              <img id="qr-code-image" alt="Table QR code" class="img-fluid" style="max-width:200px; width:100%;" />
             </div>
-            <div class="mt-3 small text-muted" id="qr-table-details"></div>
-            <a id="qr-order-link" href="table-order.html?table=T-01" class="btn btn-primary-custom w-100 mt-3">
+            <div class="mt-3 small text-muted text-center" id="qr-table-details"></div>
+            <a id="qr-order-link" href="table-order.html?table=T-01" class="btn btn-primary-custom w-100 mt-3 rounded-pill">
               <i class="fa-solid fa-arrow-right me-2"></i>Open Table Ordering
             </a>
+          </div>
 
-            <hr class="my-4">
-
-            <h4 class="fw-bold mb-3"><i class="fa-solid fa-users me-2"></i>Join Waitlist</h4>
+          <div class="glass-card no-hover p-4 mt-4 animate-in delay-3">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-users me-2"></i>Join Waitlist</h5>
             <form id="waitlist-form">
               <div class="mb-3">
-                <label class="form-label small">Your Name</label>
-                <input type="text" class="form-control" id="waitlist-name" required>
+                <label class="form-label small fw-semibold">Your Name</label>
+                <input type="text" class="form-control" id="waitlist-name" placeholder="John Doe" required>
               </div>
               <div class="mb-3">
-                <label class="form-label small">Phone</label>
-                <input type="tel" class="form-control" id="waitlist-phone" required>
+                <label class="form-label small fw-semibold">Phone</label>
+                <input type="tel" class="form-control" id="waitlist-phone" placeholder="+91 98765 43210" required>
               </div>
               <div class="mb-3">
-                <label class="form-label small">Party Size</label>
+                <label class="form-label small fw-semibold">Party Size</label>
                 <select class="form-select" id="waitlist-guests">
                   <option value="2">2 Guests</option>
                   <option value="4">4 Guests</option>
@@ -110,8 +351,11 @@
                   <option value="8">8 Guests</option>
                 </select>
               </div>
-              <button type="submit" class="btn btn-primary-custom w-100">Join Queue</button>
+              <button type="submit" class="btn btn-primary-custom w-100 rounded-pill">
+                <i class="fa-solid fa-user-plus me-2"></i>Join Queue
+              </button>
             </form>
+
             <div class="mt-4" id="waitlist-list"></div>
           </div>
         </div>
@@ -134,138 +378,153 @@
     Theme.init();
     Cart.updateBadge();
 
-    const statusMeta = {
-      available: { label: 'Available', icon: 'fa-circle-check', color: 'success' },
-      occupied: { label: 'Occupied', icon: 'fa-circle-xmark', color: 'danger' },
-      reserved: { label: 'Reserved', icon: 'fa-calendar-check', color: 'info' },
-      cleaning: { label: 'Cleaning', icon: 'fa-broom', color: 'warning' }
-    };
-
-    let waitlistEntries = [];
+    const PRODUCTION_HOST = window.location.origin;
     let tablesList = [];
+    let waitlistEntries = JSON.parse(localStorage.getItem('foodhub_waitlist') || '[]');
+    if (!Array.isArray(waitlistEntries)) waitlistEntries = [];
 
-    function renderTableStatus(tables) {
-      const grid = document.getElementById('table-status-grid');
+    // ── Floor Plan ──────────────────────────────────────────────
+    function renderFloorPlan(tables) {
+      const grid = document.getElementById('floor-plan-grid');
       if (!tables.length) {
-        grid.innerHTML = '<div class="col-12 text-center text-muted py-4">No table data available right now.</div>';
+        grid.innerHTML = '<div class="text-center text-muted py-4 w-100">No table data available.</div>';
         return;
       }
 
-      grid.innerHTML = tables.slice(0, 8).map(table => {
-        const meta = statusMeta[table.status] || statusMeta.available;
+      grid.innerHTML = tables.map(table => {
+        const status = table.status || 'available';
+        const seats  = table.seats || table.capacity || 4;
+        const num    = table.table_number || 'Table';
+        const type   = table.table_type || 'Standard';
         return `
-          <div class="col-md-6">
-            <div class="border rounded-4 p-3" style="background:var(--bg-card)">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <div class="fw-bold">${table.table_number || 'Table'}</div>
-                  <div class="small text-muted">${table.table_type || 'Standard'}</div>
-                </div>
-                <span class="badge bg-${meta.color}-subtle text-${meta.color} rounded-pill">
-                  <i class="fa-solid ${meta.icon} me-1"></i>${meta.label}
-                </span>
-              </div>
-            </div>
-          </div>`;
+          <a href="table-order.html?table=${encodeURIComponent(num)}" class="floor-table ${status}" title="${num} • ${type} • ${seats} seats">
+            <span class="status-dot"></span>
+            <i class="fa-solid fa-chair" style="font-size:1.2rem;margin-bottom:4px;opacity:0.7"></i>
+            <span>${num}</span>
+            <span class="table-seats">${type}</span>
+          </a>`;
       }).join('');
     }
 
-    function renderFloorPreview(tables) {
-      const grid = document.getElementById('floor-preview-grid');
-      if (!tables.length) {
-        grid.innerHTML = '<div class="col-12 text-center text-muted py-4">No floor preview available.</div>';
-        return;
-      }
-
-      grid.innerHTML = tables.slice(0, 8).map(table => {
-        const meta = statusMeta[table.status] || statusMeta.available;
-        return `
-          <div class="col-md-3 col-sm-6">
-            <a href="table-order.html?table=${encodeURIComponent(table.table_number || 'T-01')}" class="text-decoration-none">
-              <div class="border rounded-4 p-3 text-center h-100" style="background:var(--bg-card)">
-                <div class="fw-bold">${table.table_number || 'Table'}</div>
-                <div class="small text-muted mb-2">${table.table_type || 'Standard'}</div>
-                <span class="badge bg-${meta.color}-subtle text-${meta.color} rounded-pill">
-                  <i class="fa-solid ${meta.icon} me-1"></i>${meta.label}
-                </span>
-              </div>
-            </a>
-          </div>`;
-      }).join('');
+    // ── Stats counters ──────────────────────────────────────────
+    function updateStats(tables) {
+      const available = tables.filter(t => t.status === 'available').length;
+      const occupied  = tables.filter(t => t.status === 'occupied').length;
+      document.getElementById('stat-available').textContent = available;
+      document.getElementById('stat-occupied').textContent  = occupied;
+      document.getElementById('stat-total').textContent     = tables.length;
     }
 
+    // ── QR Code ─────────────────────────────────────────────────
     function populateTableSelector(tables) {
       const select = document.getElementById('qr-table-select');
-      select.innerHTML = tables.map(table => `<option value="${table.table_number || 'T-01'}">${table.table_number || 'Table'} • ${table.table_type || 'Standard'}</option>`).join('');
+      select.innerHTML = tables.map(t =>
+        `<option value="${t.table_number || 'T-01'}">${t.table_number || 'Table'} • ${t.table_type || 'Standard'}</option>`
+      ).join('');
       updateQrDisplay(select.value);
     }
 
     function updateQrDisplay(tableNumber) {
-      const img = document.getElementById('qr-code-image');
+      const img     = document.getElementById('qr-code-image');
       const details = document.getElementById('qr-table-details');
-      const link = document.getElementById('qr-order-link');
-      const url = `http://localhost:3000/pages/table-order.html?table=${encodeURIComponent(tableNumber)}`;
-      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
-      details.innerHTML = `<strong>${tableNumber}</strong><br/>Open the dine-in ordering page for this table.`;
-      link.href = `table-order.html?table=${encodeURIComponent(tableNumber)}`;
+      const link    = document.getElementById('qr-order-link');
+      const url     = `${PRODUCTION_HOST}/pages/table-order.html?table=${encodeURIComponent(tableNumber)}`;
+      img.src       = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+      details.innerHTML = `<strong>${tableNumber}</strong> — Scan or click to order from this table`;
+      link.href     = `table-order.html?table=${encodeURIComponent(tableNumber)}`;
     }
 
+    document.getElementById('qr-table-select').addEventListener('change', e => updateQrDisplay(e.target.value));
+
+    // ── Waitlist ────────────────────────────────────────────────
     function renderWaitlist() {
       const container = document.getElementById('waitlist-list');
       if (!waitlistEntries.length) {
-        container.innerHTML = '<div class="small text-muted">No guests are queued right now.</div>';
+        container.innerHTML = '<div class="small text-muted text-center py-2"><i class="fa-solid fa-hourglass-half me-1"></i>No guests queued right now.</div>';
         return;
       }
 
       container.innerHTML = `
-        <div class="small fw-bold mb-2">Recent Waitlist</div>
-        ${waitlistEntries.slice(0, 4).map(entry => `
-          <div class="border rounded-3 p-2 mb-2 small" style="background:var(--bg-card)">
-            <div class="fw-semibold">${entry.name}</div>
-            <div class="text-muted">${entry.guests} guests • ${entry.phone}</div>
+        <div class="small fw-bold mb-2">Queue (${waitlistEntries.length} waiting)</div>
+        ${waitlistEntries.slice(0, 5).map((entry, i) => `
+          <div class="d-flex align-items-center gap-2 border rounded-3 p-2 mb-2" style="background:var(--bg-card)">
+            <div class="queue-position">${i + 1}</div>
+            <div>
+              <div class="fw-semibold small">${entry.name}</div>
+              <div class="text-muted" style="font-size:0.75rem">${entry.guests} guests • ~${(i + 1) * 10} min wait</div>
+            </div>
           </div>
         `).join('')}`;
     }
 
-    async function loadTableStatuses() {
-      try {
-        const res = await API.getTables();
-        tablesList = Array.isArray(res.data) ? res.data : [];
-        renderTableStatus(tablesList);
-        renderFloorPreview(tablesList);
-        populateTableSelector(tablesList);
-      } catch (err) {
-        document.getElementById('table-status-grid').innerHTML = '<div class="col-12 text-center text-muted py-4">Unable to load live table status.</div>';
-      }
-    }
-
-    document.getElementById('qr-table-select').addEventListener('change', (e) => updateQrDisplay(e.target.value));
-
-    document.getElementById('waitlist-form').addEventListener('submit', (e) => {
+    document.getElementById('waitlist-form').addEventListener('submit', e => {
       e.preventDefault();
       const entry = {
-        name: document.getElementById('waitlist-name').value.trim(),
-        phone: document.getElementById('waitlist-phone').value.trim(),
-        guests: document.getElementById('waitlist-guests').value,
+        name:      document.getElementById('waitlist-name').value.trim(),
+        phone:     document.getElementById('waitlist-phone').value.trim(),
+        guests:    document.getElementById('waitlist-guests').value,
         createdAt: new Date().toISOString()
       };
-
       if (!entry.name || !entry.phone) {
         Utils.showToast('Please enter your name and phone number.', 'error');
         return;
       }
-
       waitlistEntries.unshift(entry);
       localStorage.setItem('foodhub_waitlist', JSON.stringify(waitlistEntries));
       document.getElementById('waitlist-form').reset();
       renderWaitlist();
-      Utils.showToast('You are now on the waitlist. We will notify you when a table is ready.', 'success');
+      Utils.showToast(`You're #${waitlistEntries.length} in queue! Estimated wait: ~${waitlistEntries.length * 10} min.`, 'success');
     });
 
-    const storedWaitlist = JSON.parse(localStorage.getItem('foodhub_waitlist') || '[]');
-    waitlistEntries = Array.isArray(storedWaitlist) ? storedWaitlist : [];
+    // ── Today's Specials ────────────────────────────────────────
+    async function loadSpecials() {
+      try {
+        const res = await API.getFoods({ sort: 'rating', limit: 3 });
+        const foods = Array.isArray(res.data) ? res.data.slice(0, 3) : [];
+        const emojis = ['🍛', '🍔', '🥗', '🍕', '🌮', '🍣'];
+        const grid = document.getElementById('specials-grid');
+
+        if (!foods.length) {
+          grid.innerHTML = '<div class="col-12 text-muted text-center py-3">Specials coming soon!</div>';
+          return;
+        }
+
+        grid.innerHTML = foods.map((food, i) => `
+          <div class="col-md-4">
+            <div class="special-card h-100">
+              <div class="special-img">${emojis[i % emojis.length]}</div>
+              <div class="special-body">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                  <h6 class="fw-bold mb-0" style="font-size:0.9rem">${food.name}</h6>
+                  <span class="special-price">₹${food.price}</span>
+                </div>
+                <div class="small text-muted">${food.description ? food.description.substring(0, 60) + '…' : 'Chef\'s special'}</div>
+                ${food.is_veg ? '<span class="badge bg-success-subtle text-success mt-1" style="font-size:0.7rem">Veg</span>' : ''}
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        document.getElementById('specials-grid').innerHTML = '<div class="col-12 text-muted text-center py-3">Unable to load specials.</div>';
+      }
+    }
+
+    // ── Load everything ─────────────────────────────────────────
+    async function loadTableStatuses() {
+      try {
+        const res = await API.getTables();
+        tablesList = Array.isArray(res.data) ? res.data : [];
+        renderFloorPlan(tablesList);
+        updateStats(tablesList);
+        populateTableSelector(tablesList);
+      } catch (err) {
+        document.getElementById('floor-plan-grid').innerHTML = '<div class="text-center text-muted py-4 w-100">Unable to load live table status.</div>';
+      }
+    }
+
     renderWaitlist();
     loadTableStatuses();
+    loadSpecials();
   </script>
 </body>
 </html>

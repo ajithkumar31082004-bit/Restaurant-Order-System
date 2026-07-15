@@ -67,17 +67,73 @@ Do not include any other text, only the JSON array.`;
 
   // AI Chatbot for customer queries
   async chat(message, context = {}) {
+    let foods = [];
     try {
-      const client = getGenAI();
-      if (!client) {
-        return { reply: "I'm sorry, the AI assistant is currently unavailable. Please browse our menu or contact staff for help." };
-      }
-
-      // Load menu context
-      const [foods] = await pool.execute(
+      // Load menu context first so it's available for fallbacks
+      const [rows] = await pool.execute(
         `SELECT f.name, f.price, f.is_veg, f.calories, f.description, c.name as category
          FROM foods f JOIN categories c ON f.category_id = c.id WHERE f.is_available = 1`
       );
+      foods = rows;
+    } catch (dbErr) {
+      console.error('DB load failed in AI chat:', dbErr.message);
+    }
+
+    const localFallback = () => {
+      const query = message.toLowerCase();
+      
+      if (query.match(/\b(hi|hello|hey|yo|greetings|welcome)\b/)) {
+        return "Hello! I am your FoodHub AI Assistant. How can I help you today?";
+      }
+      
+      if (query.match(/\b(hour|time|open|close|day|schedule)\b/)) {
+        return "We are open daily to serve you:\n• Mon - Fri: 10:00 AM – 11:00 PM\n• Sat - Sun: 9:00 AM – 12:00 AM";
+      }
+      
+      if (query.match(/\b(location|where|address|place|city)\b/)) {
+        return "FoodHub is located in Chennai, Tamil Nadu. Come visit us!";
+      }
+      
+      if (query.match(/\b(reserve|table|book|seat)\b/)) {
+        return "To book a table, please click the 'Book Now' button in the dashboard or navigate to the Dining section.";
+      }
+
+      if (query.match(/\b(veg|vegetable|vegetarian)\b/)) {
+        const vegFoods = foods.filter(f => f.is_veg === 1 || f.is_veg === true).slice(0, 5);
+        if (vegFoods.length > 0) {
+          let reply = "Here are some of our popular vegetarian dishes:\n";
+          vegFoods.forEach(f => {
+            reply += `• ${f.name} (₹${f.price}) - ${f.category}\n`;
+          });
+          return reply;
+        }
+      }
+
+      // Search in menu
+      if (foods.length > 0) {
+        const matches = foods.filter(f => 
+          f.name.toLowerCase().includes(query) || 
+          f.category.toLowerCase().includes(query) ||
+          f.description.toLowerCase().includes(query)
+        ).slice(0, 5);
+
+        if (matches.length > 0) {
+          let reply = "Here is what I found on our menu matching your request:\n";
+          matches.forEach(f => {
+            reply += `• ${f.name} (₹${f.price}) - ${f.description}\n`;
+          });
+          return reply;
+        }
+      }
+
+      return "I'm currently running in helper mode. You can ask me about our 'hours', 'location', 'tables', 'veg options', or search for menu items like 'biryani'!";
+    };
+
+    try {
+      const client = getGenAI();
+      if (!client) {
+        return { reply: localFallback() };
+      }
 
       const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
@@ -91,14 +147,14 @@ Available menu: ${JSON.stringify(foods.slice(0, 50))}
 ${context.table ? `Customer is at Table: ${context.table}` : ''}
 ${context.orderType ? `Order type: ${context.orderType}` : ''}
 
-Be helpful, friendly, and concise. If asked about prices, provide exact prices from the menu.
+Helpful, friendly, and concise. If asked about prices, provide exact prices from the menu.
 Do not make up information not in the menu. Keep responses under 100 words.`;
 
       const result = await model.generateContent(`${systemContext}\n\nCustomer: ${message}`);
       return { reply: result.response.text() };
     } catch (err) {
-      console.error('AI chat error:', err.message);
-      return { reply: "I'm having trouble connecting right now. Please try again or ask our staff for help!" };
+      console.error('AI chat error (falling back to offline handler):', err.message);
+      return { reply: localFallback() };
     }
   },
 
