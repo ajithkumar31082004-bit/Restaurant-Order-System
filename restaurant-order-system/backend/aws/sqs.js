@@ -57,22 +57,57 @@ async function sendOrderNotification(order, type = 'email') {
     return { MessageId: 'local-dev-mock-id', mock: true };
   }
 
-  const message = {
-    orderId: order.orderId,
-    customerName: order.name || order.customer_name,
-    phone: order.phone || order.customer_phone,
-    email: order.email || order.customer_email,
-    total: order.total || order.total_amount,
-    status: order.status || order.order_status,
-    items: order.items,
-    notificationType: type,
-    timestamp: new Date().toISOString()
-  };
+  const orderId = order.orderId || order.order_id;
+  const customerName = order.name || order.customer_name || 'Valued Customer';
+  const total = order.total || order.total_amount;
+  const items = order.items || [];
+
+  let itemsText = '';
+  items.forEach((item, index) => {
+    const qty = item.qty || item.quantity || 1;
+    const price = item.price || item.unit_price || 0;
+    const name = item.name || item.food_name || 'Item';
+    itemsText += `  ${index + 1}. ${name} x ${qty} — ₹${(qty * price).toFixed(2)}\n`;
+  });
+
+  const formattedMessage = `
+🍔 FoodHub Order Confirmation 🍔
+=========================================
+Hello ${customerName},
+
+Thank you for your order! We are preparing your meal with care.
+
+📄 Order Details:
+-----------------------------------------
+Order ID : ${orderId}
+Status   : Pending
+Date     : ${new Date().toLocaleString('en-IN')}
+
+🛒 Items Ordered:
+-----------------------------------------
+${itemsText}
+-----------------------------------------
+TOTAL AMOUNT: ₹${parseFloat(total).toFixed(2)}
+
+⚡ Interactive Actions:
+=========================================
+🔗 Track Your Order Live:
+   http://ec2-15-206-72-158.ap-south-1.compute.amazonaws.com/pages/track-order.html?orderId=${orderId}
+
+📥 Download Tax Invoice (PDF):
+   http://ec2-15-206-72-158.ap-south-1.compute.amazonaws.com/api/orders/${orderId}/invoice
+
+=========================================
+We hope you enjoy your meal!
+If you have any questions, contact us at:
+📞 Phone  : +91 98765 43210
+📧 Email  : support@foodhub.com
+`;
 
   const command = new PublishCommand({
     TopicArn: config.aws.snsTopicArn,
-    Message: JSON.stringify(message),
-    Subject: `Order Confirmation - ${order.orderId}`,
+    Message: formattedMessage,
+    Subject: `Order Confirmation - ${orderId}`,
     MessageAttributes: {
       notificationType: {
         DataType: 'String',
@@ -82,7 +117,7 @@ async function sendOrderNotification(order, type = 'email') {
   });
 
   const response = await snsClient.send(command);
-  console.log(`Notification sent for order ${order.orderId}: ${response.MessageId}`);
+  console.log(`Notification sent for order ${orderId}: ${response.MessageId}`);
   return response;
 }
 
