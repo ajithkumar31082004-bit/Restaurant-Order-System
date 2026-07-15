@@ -105,13 +105,16 @@ const Utils = {
   },
 
   logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    if (window.location.pathname.includes('/admin/')) {
-      window.location.href = '../login.html';
-    } else {
-      window.location.href = 'login.html';
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+    } catch (err) {
+      console.warn('Logout cleanup failed:', err);
     }
+
+    window.location.replace('/pages/login.html');
   },
 
   requireAuth(redirect = 'login.html') {
