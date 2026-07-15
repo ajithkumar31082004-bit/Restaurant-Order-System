@@ -241,7 +241,12 @@ const orderController = {
         return res.status(404).json({ success: false, message: 'Order not found' });
       }
 
-      const statusSteps = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Packed', 'Out for Delivery', 'Delivered'];
+      const isDineIn = order.order_type === 'dine-in' || order.order_type === 'table';
+
+      const deliverySteps = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Packed', 'Out for Delivery', 'Delivered'];
+      const dineInSteps   = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Ready', 'Served'];
+
+      const statusSteps = isDineIn ? dineInSteps : deliverySteps;
       const currentIndex = statusSteps.indexOf(order.order_status);
 
       const timeline = statusSteps.map((step, index) => ({
@@ -257,6 +262,8 @@ const orderController = {
           currentStatus: order.order_status,
           estimatedDelivery: order.estimated_delivery,
           paymentMethod: order.payment_method,
+          orderType: order.order_type || 'delivery',
+          tableId: order.table_id || null,
           timeline
         }
       });

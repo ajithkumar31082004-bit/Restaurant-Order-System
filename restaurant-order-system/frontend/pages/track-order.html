@@ -7,14 +7,52 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="../css/style.css" rel="stylesheet">
+  <style>
+    /* ─── Dine-In Banner ─── */
+    .dine-in-banner {
+      background: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(255,200,55,0.1));
+      border: 1.5px solid var(--primary);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.2rem;
+    }
+    .dine-in-banner i { color: var(--primary); font-size: 1.5rem; }
+    .dine-in-banner .label { font-weight: 700; font-size: 1rem; }
+    .dine-in-banner .sub   { font-size: 0.82rem; color: var(--text-muted); }
+
+    /* ─── ETA block ─── */
+    .eta-block {
+      background: var(--primary-light);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 1.2rem;
+    }
+
+    /* ─── Timeline overrides for dine-in ─── */
+    .dine-in-timeline .timeline-item.active .timeline-dot {
+      background: var(--primary);
+      box-shadow: 0 0 0 5px rgba(255,107,53,0.2);
+    }
+    .dine-in-timeline .timeline-item.completed .timeline-dot {
+      background: #22c55e;
+    }
+
+    /* Ready / Served special colors */
+    #step-Ready.active  .timeline-dot { background: #f59e0b !important; box-shadow: 0 0 0 5px rgba(245,158,11,0.2) !important; }
+    #step-Served.active  .timeline-dot { background: #22c55e !important; box-shadow: 0 0 0 5px rgba(34,197,94,0.2) !important; }
+    #step-Served.completed .timeline-dot { background: #22c55e !important; }
+  </style>
 </head>
 <body>
   <div id="navbar"></div>
 
   <div class="page-header">
     <div class="container">
-      <h1><i class="fa-solid fa-map-location-dot me-2"></i>Track Order</h1>
-      <p>Follow your delicious meal from our kitchen to your doorstep</p>
+      <h1 id="page-header-title"><i class="fa-solid fa-map-location-dot me-2"></i>Track Order</h1>
+      <p id="page-header-sub">Follow your delicious meal from our kitchen to your doorstep</p>
     </div>
   </div>
 
@@ -46,9 +84,19 @@
               </div>
             </div>
 
-            <div class="row g-3 mb-4 p-3 rounded-4" style="background: var(--primary-light);">
+            <!-- Dine-In Banner (hidden by default, shown for dine-in orders) -->
+            <div class="dine-in-banner" id="dine-in-banner" style="display:none;">
+              <i class="fa-solid fa-utensils"></i>
+              <div>
+                <div class="label">Dine-In Order <span id="dine-in-table-label"></span></div>
+                <div class="sub">Your meal is being prepared fresh in our kitchen and will be brought to your table.</div>
+              </div>
+            </div>
+
+            <!-- ETA / Payment row -->
+            <div class="eta-block row g-2 mb-4">
               <div class="col-6">
-                <span class="small text-muted d-block">Estimated Delivery</span>
+                <span class="small text-muted d-block" id="eta-label">Estimated Delivery</span>
                 <strong id="est-delivery-time">—</strong>
               </div>
               <div class="col-6 text-end">
@@ -57,55 +105,101 @@
               </div>
             </div>
 
-            <!-- Timeline -->
-            <div class="timeline" id="tracking-timeline" style="--progress: 0%;">
+            <!-- ─── DELIVERY Timeline ─── -->
+            <div class="timeline" id="delivery-timeline" style="--progress: 0%;">
+              <div class="timeline-item completed" id="delivery-step-Pending">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6><i class="fa-solid fa-bag-shopping me-1 text-primary"></i>Order Placed</h6>
+                  <p>We've received your order and are validating details.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="delivery-step-Confirmed">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6><i class="fa-solid fa-circle-check me-1 text-success"></i>Confirmed</h6>
+                  <p>Your order has been accepted by the restaurant.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="delivery-step-Preparing">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6><i class="fa-solid fa-blender me-1 text-warning"></i>Preparing</h6>
+                  <p>Kitchen is preparing fresh ingredients for your meal.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="delivery-step-Cooking">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6><i class="fa-solid fa-fire-flame-curved me-1 text-danger"></i>Cooking</h6>
+                  <p>Chefs are cooking up your delicious dish.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="delivery-step-Packed">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6><i class="fa-solid fa-box me-1 text-info"></i>Packed</h6>
+                  <p>Your order is hot and safely packed for transit.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="delivery-step-Out for Delivery">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6><i class="fa-solid fa-motorcycle me-1 text-primary"></i>Out for Delivery</h6>
+                  <p>Delivery rider is on the way to your address.</p>
+                </div>
+              </div>
+              <div class="timeline-item" id="delivery-step-Delivered">
+                <div class="timeline-dot"></div>
+                <div class="timeline-item-content">
+                  <h6><i class="fa-solid fa-house-circle-check me-1 text-success"></i>Delivered</h6>
+                  <p>Order completed. Enjoy your delicious food!</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─── DINE-IN Timeline ─── -->
+            <div class="timeline dine-in-timeline" id="dinein-timeline" style="--progress: 0%; display:none;">
               <div class="timeline-item completed" id="step-Pending">
                 <div class="timeline-dot"></div>
                 <div class="timeline-item-content">
-                  <h6>Order Placed</h6>
-                  <p>We've received your order and are validating details.</p>
+                  <h6><i class="fa-solid fa-utensils me-1 text-primary"></i>Order Placed</h6>
+                  <p>Your dine-in order has been received at the kitchen.</p>
                 </div>
               </div>
               <div class="timeline-item" id="step-Confirmed">
                 <div class="timeline-dot"></div>
                 <div class="timeline-item-content">
-                  <h6>Confirmed</h6>
-                  <p>Your order has been accepted by the restaurant.</p>
+                  <h6><i class="fa-solid fa-circle-check me-1 text-success"></i>Confirmed</h6>
+                  <p>Kitchen has accepted your order and queued it.</p>
                 </div>
               </div>
               <div class="timeline-item" id="step-Preparing">
                 <div class="timeline-dot"></div>
                 <div class="timeline-item-content">
-                  <h6>Preparing</h6>
-                  <p>Kitchen is preparing fresh ingredients for your meal.</p>
+                  <h6><i class="fa-solid fa-blender me-1 text-warning"></i>Preparing</h6>
+                  <p>Fresh ingredients are being prepped for your meal.</p>
                 </div>
               </div>
               <div class="timeline-item" id="step-Cooking">
                 <div class="timeline-dot"></div>
                 <div class="timeline-item-content">
-                  <h6>Cooking</h6>
-                  <p>Chefs are cooking up your delicious dish.</p>
+                  <h6><i class="fa-solid fa-fire-flame-curved me-1 text-danger"></i>Cooking</h6>
+                  <p>Our chefs are cooking your dish fresh at the stove.</p>
                 </div>
               </div>
-              <div class="timeline-item" id="step-Packed">
+              <div class="timeline-item" id="step-Ready">
                 <div class="timeline-dot"></div>
                 <div class="timeline-item-content">
-                  <h6>Packed</h6>
-                  <p>Your order is hot and safely packed for transit.</p>
+                  <h6><i class="fa-solid fa-bell-concierge me-1" style="color:#f59e0b"></i>Ready at Table</h6>
+                  <p>Your food is ready! A waiter is bringing it to your table.</p>
                 </div>
               </div>
-              <div class="timeline-item" id="step-Out for Delivery">
+              <div class="timeline-item" id="step-Served">
                 <div class="timeline-dot"></div>
                 <div class="timeline-item-content">
-                  <h6>Out for Delivery</h6>
-                  <p>Delivery rider is on the way to your address.</p>
-                </div>
-              </div>
-              <div class="timeline-item" id="step-Delivered">
-                <div class="timeline-dot"></div>
-                <div class="timeline-item-content">
-                  <h6>Delivered</h6>
-                  <p>Order completed. Enjoy your delicious food!</p>
+                  <h6><i class="fa-solid fa-plate-wheat me-1 text-success"></i>Served</h6>
+                  <p>Your meal has been served. Bon appétit! 🍽️</p>
                 </div>
               </div>
             </div>
@@ -150,7 +244,8 @@
     const params = new URLSearchParams(window.location.search);
     const urlOrderId = params.get('orderId');
 
-    const steps = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Packed', 'Out for Delivery', 'Delivered'];
+    const deliverySteps = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Packed', 'Out for Delivery', 'Delivered'];
+    const dineInSteps   = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Ready', 'Served'];
 
     async function trackOrder(orderId) {
       if (!orderId) return;
@@ -158,53 +253,89 @@
       try {
         const res = await API.trackOrder(orderId);
         const tracker = res.data;
-        
+
         document.getElementById('empty-state').style.display = 'none';
-        const card = document.getElementById('tracker-card');
-        card.style.display = 'block';
+        document.getElementById('tracker-card').style.display = 'block';
 
-        document.getElementById('order-id-title').textContent = `Order ${tracker.orderId}`;
-        document.getElementById('current-status-badge').textContent = tracker.currentStatus;
-        
-        // Color update for current status badge
-        const badge = document.getElementById('current-status-badge');
-        badge.className = 'badge';
-        if (tracker.currentStatus === 'Delivered') badge.classList.add('bg-success');
-        else if (tracker.currentStatus === 'Cancelled') badge.classList.add('bg-danger');
-        else badge.classList.add('bg-primary');
+        const isDineIn = tracker.orderType === 'dine-in' || tracker.orderType === 'table';
+        const steps = isDineIn ? dineInSteps : deliverySteps;
 
-        if (tracker.estimatedDelivery) {
-          document.getElementById('est-delivery-time').textContent = Utils.formatDate(tracker.estimatedDelivery);
+        // ── Page header copy
+        if (isDineIn) {
+          document.getElementById('page-header-title').innerHTML = '<i class="fa-solid fa-utensils me-2"></i>Track Dine-In Order';
+          document.getElementById('page-header-sub').textContent = 'Follow your meal as it travels from our kitchen to your table';
         } else {
-          document.getElementById('est-delivery-time').textContent = '—';
+          document.getElementById('page-header-title').innerHTML = '<i class="fa-solid fa-map-location-dot me-2"></i>Track Delivery Order';
+          document.getElementById('page-header-sub').textContent = 'Follow your delicious meal from our kitchen to your doorstep';
         }
 
-        // We can fetch details or fallback if payment method not present
-        document.getElementById('payment-method-text').textContent = tracker.paymentMethod || 'Online / COD';
+        // ── Order meta
+        document.getElementById('order-id-title').textContent = `Order ${tracker.orderId}`;
 
-        // Load invoice button link
+        // ── Status badge
+        const badge = document.getElementById('current-status-badge');
+        badge.textContent = tracker.currentStatus;
+        badge.className = 'badge';
+        if (['Delivered', 'Served'].includes(tracker.currentStatus)) badge.classList.add('bg-success');
+        else if (tracker.currentStatus === 'Cancelled') badge.classList.add('bg-danger');
+        else if (tracker.currentStatus === 'Ready') badge.classList.add('bg-warning', 'text-dark');
+        else badge.classList.add('bg-primary');
+
+        // ── ETA label & value
+        const etaLabel = document.getElementById('eta-label');
+        const etaValue = document.getElementById('est-delivery-time');
+        if (isDineIn) {
+          etaLabel.textContent = 'Estimated Ready Time';
+          // For dine-in, show ~20 min from order rather than delivery ETA
+          etaValue.textContent = tracker.estimatedDelivery
+            ? Utils.formatDate(tracker.estimatedDelivery)
+            : '~20 minutes';
+        } else {
+          etaLabel.textContent = 'Estimated Delivery';
+          etaValue.textContent = tracker.estimatedDelivery ? Utils.formatDate(tracker.estimatedDelivery) : '—';
+        }
+
+        document.getElementById('payment-method-text').textContent = tracker.paymentMethod || 'COD';
+
+        // ── Dine-In banner
+        const banner = document.getElementById('dine-in-banner');
+        if (isDineIn) {
+          banner.style.display = 'flex';
+          if (tracker.tableId) {
+            document.getElementById('dine-in-table-label').textContent = `· Table T-${String(tracker.tableId).padStart(2,'0')}`;
+          }
+        } else {
+          banner.style.display = 'none';
+        }
+
+        // ── Show/hide the correct timeline
+        document.getElementById('delivery-timeline').style.display = isDineIn ? 'none' : 'block';
+        document.getElementById('dinein-timeline').style.display  = isDineIn ? 'block' : 'none';
+
+        // ── Invoice button
         const invoiceBtn = document.getElementById('invoice-btn');
         invoiceBtn.href = `${API.baseURL}/orders/${orderId}/invoice`;
         invoiceBtn.style.display = 'inline-block';
 
-        // Update timeline status
+        // ── Update timeline step states
+        const prefix = isDineIn ? '' : 'delivery-';
         const currentIndex = steps.indexOf(tracker.currentStatus);
-        
+
         steps.forEach((step, index) => {
-          const itemEl = document.getElementById(`step-${step}`);
-          if (itemEl) {
-            itemEl.classList.remove('completed', 'active');
-            if (index < currentIndex) {
-              itemEl.classList.add('completed');
-            } else if (index === currentIndex) {
-              itemEl.classList.add('active');
-            }
+          const el = document.getElementById(`${prefix}step-${step}`);
+          if (el) {
+            el.classList.remove('completed', 'active');
+            if (index < currentIndex)      el.classList.add('completed');
+            else if (index === currentIndex) el.classList.add('active');
           }
         });
 
-        // Set timeline line progress percentage
+        // ── Timeline line progress
         const progressPercent = currentIndex >= 0 ? (currentIndex / (steps.length - 1)) * 100 : 0;
-        document.getElementById('tracking-timeline').style.setProperty('--progress', `${progressPercent}%`);
+        const timelineEl = isDineIn
+          ? document.getElementById('dinein-timeline')
+          : document.getElementById('delivery-timeline');
+        timelineEl.style.setProperty('--progress', `${progressPercent}%`);
 
       } catch (err) {
         Utils.showToast(err.message || 'Order not found', 'error');
