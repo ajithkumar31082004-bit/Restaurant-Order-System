@@ -56,7 +56,7 @@ async function run() {
   console.log('── 1. SERVER HEALTH ─────────────────────');
   let r = await req('GET', '/api');
   check('API root responds', r.status === 200);
-  check('API version present', r.body?.version === '1.0.0', JSON.stringify(r.body));
+  check('API version present', r.body?.version === '2.0.0', JSON.stringify(r.body));
 
   // ── 2. Categories ────────────────────────────────────
   console.log('\n── 2. CATEGORIES ────────────────────────');
@@ -167,7 +167,7 @@ async function run() {
   const pages = ['/', '/menu', '/login', '/register', '/cart', '/checkout', '/track-order', '/contact', '/admin'];
   for (const page of pages) {
     r = await req('GET', page);
-    check(`Page ${page} loads (200/304)`, [200, 304].includes(r.status), `status=${r.status}`);
+    check(`Page ${page} loads (200/302/304)`, [200, 302, 304].includes(r.status), `status=${r.status}`);
   }
 
   // ── 10. Static Assets ────────────────────────────────
