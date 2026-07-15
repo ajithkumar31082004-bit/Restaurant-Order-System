@@ -425,6 +425,8 @@
         city: 'Dine-In',
         pincode: '000000',
         payment,
+        order_type: 'dine-in',
+        table_id: tableId,
         orderNotes: 'Dine-in Order placed directly from QR code.',
         items: localCart.map(i => ({
           foodId: i.id,
@@ -435,11 +437,8 @@
       };
 
       try {
-        // Create order
+        // Create order — server will automatically mark table as occupied for dine-in orders
         const res = await API.createOrder(payload);
-
-        // Mark table as occupied
-        await API.updateTableStatus(tableId, 'occupied');
 
         Swal.fire({
           icon: 'success',

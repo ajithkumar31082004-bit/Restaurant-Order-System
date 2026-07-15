@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const Coupon = require('../models/Coupon');
+const Table = require('../models/Table');
 const { sendOrderToSQS, sendOrderNotification } = require('../aws/sqs');
 const PDFDocument = require('pdfkit');
 
@@ -57,6 +58,15 @@ const orderController = {
       };
 
       const order = await Order.create(orderData, items);
+
+      // Auto-mark the table as occupied for dine-in orders (server-side, no auth needed from guest)
+      if ((order_type === 'dine-in' || order_type === 'table') && table_id) {
+        try {
+          await Table.updateStatus(parseInt(table_id, 10), 'occupied');
+        } catch (tableErr) {
+          console.warn('Table status update failed (non-critical):', tableErr.message);
+        }
+      }
 
       if (coupon) {
         await Coupon.incrementUsage(coupon.id);
