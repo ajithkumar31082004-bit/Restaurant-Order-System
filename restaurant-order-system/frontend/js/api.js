@@ -2,9 +2,9 @@
  * API Service - Restaurant Order System
  */
 const API = {
-  baseURL: window.location.port === '5000'
-    ? '/api'
-    : 'http://localhost:5000/api',
+  baseURL: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? (window.location.port === '5000' ? '/api' : 'http://localhost:5000/api')
+    : '/api',
 
   getToken() {
     return localStorage.getItem('token');
