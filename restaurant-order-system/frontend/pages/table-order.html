@@ -59,6 +59,23 @@
     </div>
   </section>
 
+  <!-- Live Order Status -->
+  <section class="pt-3 pb-2">
+    <div class="container">
+      <div class="glass-card no-hover p-3">
+        <div class="row align-items-center g-3">
+          <div class="col-md-8">
+            <div class="fw-bold mb-1"><i class="fa-solid fa-wave-square me-2"></i>Live kitchen status</div>
+            <div class="small text-muted">Your order will appear here as it moves from pending to ready.</div>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <span class="badge rounded-pill bg-info-subtle text-info" id="live-order-state">Awaiting order</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Ordering System -->
   <section class="py-3">
     <div class="container">
@@ -85,6 +102,11 @@
             </div>
             <div class="mt-3 small text-muted" id="table-order-hint">Tip: Use the search box to find your meal quickly.</div>
             <div class="mt-4 p-4 rounded-4 border text-center" style="background:linear-gradient(135deg, var(--bg-card), rgba(255,107,53,0.05));">
+              <div class="fw-bold mb-2"><i class="fa-solid fa-microphone me-2"></i>Voice Ordering</div>
+              <div class="small text-muted mb-3">Say “Two Chicken Biryani and one Coke” to get started.</div>
+              <button class="btn btn-outline-primary btn-sm" onclick="startVoiceOrder()"><i class="fa-solid fa-microphone me-1"></i>Try Voice Order</button>
+            </div>
+            <div class="mt-4 p-4 rounded-4 border text-center" style="background:linear-gradient(135deg, rgba(46,196,182,0.07), rgba(255,107,53,0.05));">
               <div class="fw-bold mb-2"><i class="fa-solid fa-qrcode me-2"></i>Table QR Preview</div>
               <div class="small text-muted mb-3">Scan this QR to open the same dine-in ordering page on your phone.</div>
               <img id="table-qr-preview" alt="Table QR code" class="img-fluid rounded-3 shadow-sm" style="max-width:220px;width:100%" />
@@ -178,6 +200,26 @@
       const url = `http://localhost:3000/pages/table-order.html?table=${encodeURIComponent(tableName)}`;
       img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
       img.dataset.url = url;
+    }
+
+    function startVoiceOrder() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        Utils.showToast('Voice input is not available in this browser.', 'info');
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.start();
+      Utils.showToast('Listening for your order...', 'info');
+      recognition.onresult = function(event) {
+        const text = event.results[0][0].transcript;
+        document.getElementById('search-input').value = text;
+        Utils.showToast(`Captured: ${text}`, 'success');
+      };
+      recognition.onerror = function() {
+        Utils.showToast('Voice recognition failed. Please type your order manually.', 'error');
+      };
     }
 
     function downloadQrCode() {

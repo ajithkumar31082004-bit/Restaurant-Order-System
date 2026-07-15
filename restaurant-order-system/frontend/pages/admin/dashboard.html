@@ -23,7 +23,10 @@
 
     document.getElementById('admin-layout').innerHTML = Admin.layout('dashboard', `
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0">Dashboard</h4>
+        <div>
+          <h4 class="mb-0">AI Operations Dashboard</h4>
+          <p class="text-muted small mb-0">Real-time restaurant intelligence, staffing guidance, and revenue insights</p>
+        </div>
         <div class="d-flex gap-2">
           <a href="${API.exportOrders()}" class="btn btn-outline-primary btn-sm" id="export-csv"><i class="fa-solid fa-file-csv me-1"></i>Export CSV</a>
           <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-file-pdf me-1"></i>Export PDF</button>
@@ -34,18 +37,39 @@
       </div>
       <div class="row g-4 mb-4">
         <div class="col-lg-8">
-          <div class="glass-card chart-container"><h6 class="mb-3">Daily Revenue (30 days)</h6><canvas id="dailyChart"></canvas></div>
+          <div class="glass-card chart-container"><h6 class="mb-3">Revenue Trend</h6><canvas id="dailyChart"></canvas></div>
         </div>
         <div class="col-lg-4">
           <div class="glass-card chart-container"><h6 class="mb-3">Peak Order Hours</h6><canvas id="peakChart"></canvas></div>
         </div>
       </div>
-      <div class="row g-4" id="reports">
+      <div class="row g-4 mb-4">
         <div class="col-lg-6">
           <div class="glass-card chart-container"><h6 class="mb-3">Monthly Revenue</h6><canvas id="monthlyChart"></canvas></div>
         </div>
         <div class="col-lg-6">
           <div class="glass-card p-4"><h6 class="mb-3">Top Selling Foods</h6><div id="top-foods"></div></div>
+        </div>
+      </div>
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="glass-card p-4">
+            <h6 class="mb-3"><i class="fa-solid fa-brain me-2 text-primary"></i>AI Forecast</h6>
+            <div class="small text-muted mb-2">Expected customers tonight</div>
+            <h3 class="fw-bold text-primary">285</h3>
+            <p class="small mb-0">Busy window: 7 PM – 9 PM • Recommended staff: 12 waiters</p>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="glass-card p-4">
+            <h6 class="mb-3"><i class="fa-solid fa-boxes-stacked me-2 text-success"></i>Inventory Alert</h6>
+            <div class="small text-muted mb-2">Low stock items</div>
+            <ul class="mb-0 small">
+              <li>Chicken low — reorder soon</li>
+              <li>Paneer nearing minimum threshold</li>
+              <li>Rice stock stable</li>
+            </ul>
+          </div>
         </div>
       </div>
     `);
