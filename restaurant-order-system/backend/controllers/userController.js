@@ -121,13 +121,69 @@ const userController = {
   // Wallet Add Balance Simulator
   async addWalletBalance(req, res, next) {
     try {
-      const { amount } = req.body;
+      const { amount, deductPoints } = req.body;
       if (!amount || amount <= 0) {
         return res.status(400).json({ success: false, message: 'Amount must be greater than zero' });
       }
       await pool.execute('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?', [amount, req.user.id]);
+      // Optionally deduct loyalty points for wallet cash redemption
+      if (deductPoints && deductPoints > 0) {
+        await pool.execute(
+          'UPDATE users SET rewards_points = GREATEST(0, rewards_points - ?) WHERE id = ?',
+          [deductPoints, req.user.id]
+        );
+      }
       const user = await User.findById(req.user.id);
       res.json({ success: true, message: 'Balance added successfully', user });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Add loyalty reward points (called internally on order placement)
+  async addRewardsPoints(req, res, next) {
+    try {
+      const { points } = req.body;
+      if (!points || points <= 0) {
+        return res.status(400).json({ success: false, message: 'Points must be greater than zero' });
+      }
+      await pool.execute(
+        'UPDATE users SET rewards_points = rewards_points + ? WHERE id = ?',
+        [points, req.user.id]
+      );
+      const user = await User.findById(req.user.id);
+      res.json({ success: true, message: `${points} points added to your account`, user });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Redeem loyalty points for a reward
+  async redeemRewardsPoints(req, res, next) {
+    try {
+      const { cost, rewardName } = req.body;
+      if (!cost || cost <= 0) {
+        return res.status(400).json({ success: false, message: 'Cost must be greater than zero' });
+      }
+      // Check current points
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+      if ((user.rewards_points || 0) < cost) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient points. You need ${cost - user.rewards_points} more points.`
+        });
+      }
+      await pool.execute(
+        'UPDATE users SET rewards_points = rewards_points - ? WHERE id = ?',
+        [cost, req.user.id]
+      );
+      const updatedUser = await User.findById(req.user.id);
+      res.json({
+        success: true,
+        message: `Successfully redeemed ${cost} points for ${rewardName || 'reward'}!`,
+        user: updatedUser
+      });
     } catch (error) {
       next(error);
     }

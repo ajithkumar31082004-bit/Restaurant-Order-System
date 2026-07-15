@@ -169,6 +169,23 @@ const orderController = {
         await Coupon.incrementUsage(coupon.id);
       }
 
+      // Award loyalty points to authenticated user (10 points per ₹100 spent)
+      if (req.user?.id) {
+        try {
+          const pool = require('../config/database');
+          const pointsEarned = Math.floor(totals.total * 0.1);
+          if (pointsEarned > 0) {
+            await pool.execute(
+              'UPDATE users SET rewards_points = rewards_points + ? WHERE id = ?',
+              [pointsEarned, req.user.id]
+            );
+            console.log(`[Loyalty] Awarded ${pointsEarned} points to user ${req.user.id}`);
+          }
+        } catch (loyaltyErr) {
+          console.error('Failed to award loyalty points:', loyaltyErr.message);
+        }
+      }
+
       const sqsPayload = {
         orderId,
         userId: req.user?.id || null,

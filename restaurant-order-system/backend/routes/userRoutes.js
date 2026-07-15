@@ -21,4 +21,8 @@ router.delete('/addresses/:id', authMiddleware, userController.deleteAddress);
 // Wallet routes
 router.post('/wallet/add', authMiddleware, userController.addWalletBalance);
 
+// Loyalty points routes
+router.post('/loyalty/add', authMiddleware, userController.addRewardsPoints);
+router.post('/loyalty/redeem', authMiddleware, userController.redeemRewardsPoints);
+
 module.exports = router;

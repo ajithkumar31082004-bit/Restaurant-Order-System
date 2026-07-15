@@ -323,7 +323,8 @@
               <select class="form-select" id="qr-table-select"></select>
             </div>
             <div class="qr-display">
-              <img id="qr-code-image" alt="Table QR code" class="img-fluid" style="max-width:200px; width:100%;" />
+              <img id="qr-code-image" alt="Table QR code" class="img-fluid" style="max-width:200px; width:100%; min-height:120px;" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https://foodhub.com'" />
+              <div id="qr-loading" class="text-muted small mt-2"><i class="fa-solid fa-spinner fa-spin me-1"></i>Loading QR...</div>
             </div>
             <div class="mt-3 small text-muted text-center" id="qr-table-details"></div>
             <a id="qr-order-link" href="table-order.html?table=T-01" class="btn btn-primary-custom w-100 mt-3 rounded-pill">
@@ -425,11 +426,16 @@
     }
 
     function updateQrDisplay(tableNumber) {
+      if (!tableNumber) return;
       const img     = document.getElementById('qr-code-image');
+      const loading = document.getElementById('qr-loading');
       const details = document.getElementById('qr-table-details');
       const link    = document.getElementById('qr-order-link');
       const url     = `${PRODUCTION_HOST}/pages/table-order.html?table=${encodeURIComponent(tableNumber)}`;
-      img.src       = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+      const qrSrc   = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+      img.src       = qrSrc;
+      img.onload    = () => { if (loading) loading.style.display = 'none'; };
+      img.onerror   = () => { if (loading) loading.innerHTML = `<i class="fa-solid fa-qrcode me-1"></i>Scan the link below`; };
       details.innerHTML = `<strong>${tableNumber}</strong> — Scan or click to order from this table`;
       link.href     = `table-order.html?table=${encodeURIComponent(tableNumber)}`;
     }
@@ -477,11 +483,17 @@
     });
 
     // ── Today's Specials ────────────────────────────────────────
+    const FOOD_EMOJIS = ['🍛', '🍔', '🥗', '🍕', '🌮', '🍣', '🍜', '🥘', '🍗'];
+    const SPECIAL_COLORS = [
+      { bg: '#fff3e0', color: '#e65100' },
+      { bg: '#fce4ec', color: '#c62828' },
+      { bg: '#e8f5e9', color: '#2e7d32' }
+    ];
+
     async function loadSpecials() {
       try {
         const res = await API.getFoods({ sort: 'rating', limit: 3 });
         const foods = Array.isArray(res.data) ? res.data.slice(0, 3) : [];
-        const emojis = ['🍛', '🍔', '🥗', '🍕', '🌮', '🍣'];
         const grid = document.getElementById('specials-grid');
 
         if (!foods.length) {
@@ -489,21 +501,24 @@
           return;
         }
 
-        grid.innerHTML = foods.map((food, i) => `
+        grid.innerHTML = foods.map((food, i) => {
+          const clr = SPECIAL_COLORS[i % SPECIAL_COLORS.length];
+          const emoji = FOOD_EMOJIS[i % FOOD_EMOJIS.length];
+          return `
           <div class="col-md-4">
             <div class="special-card h-100">
-              <div class="special-img">${emojis[i % emojis.length]}</div>
+              <div class="special-img" style="background:${clr.bg}; color:${clr.color}; font-size:3.5rem">${emoji}</div>
               <div class="special-body">
                 <div class="d-flex justify-content-between align-items-start mb-1">
                   <h6 class="fw-bold mb-0" style="font-size:0.9rem">${food.name}</h6>
                   <span class="special-price">₹${food.price}</span>
                 </div>
-                <div class="small text-muted">${food.description ? food.description.substring(0, 60) + '…' : 'Chef\'s special'}</div>
-                ${food.is_veg ? '<span class="badge bg-success-subtle text-success mt-1" style="font-size:0.7rem">Veg</span>' : ''}
+                <div class="small text-muted mb-1">${food.description ? food.description.substring(0, 65) + '…' : "Chef's special today"}</div>
+                ${food.is_veg ? '<span class="badge bg-success-subtle text-success" style="font-size:0.7rem"><i class="fa-solid fa-leaf me-1"></i>Veg</span>' : '<span class="badge bg-danger-subtle text-danger" style="font-size:0.7rem"><i class="fa-solid fa-drumstick-bite me-1"></i>Non-Veg</span>'}
               </div>
             </div>
-          </div>
-        `).join('');
+          </div>`;
+        }).join('');
       } catch (err) {
         document.getElementById('specials-grid').innerHTML = '<div class="col-12 text-muted text-center py-3">Unable to load specials.</div>';
       }
