@@ -7,9 +7,100 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="../../css/style.css" rel="stylesheet">
+  <style>
+    .role-badge {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.4px;
+      padding: 0.3rem 0.7rem; border-radius: 30px; text-transform: uppercase;
+    }
+    .role-admin    { background: rgba(255,107,53,0.15); color: #ff6b35; }
+    .role-manager  { background: rgba(67,97,238,0.15);  color: #4361ee; }
+    .role-chef     { background: rgba(230,57,70,0.15);  color: #e63946; }
+    .role-waiter   { background: rgba(46,196,182,0.15); color: #2ec4b6; }
+    .role-cashier  { background: rgba(255,186,8,0.15);  color: #c9960a; }
+    .role-customer { background: rgba(40,167,69,0.15);  color: #28a745; }
+
+    .staff-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem; flex-shrink: 0;
+    }
+    .filter-btn { border-radius: 20px; font-size: 0.78rem; padding: 0.3rem 0.9rem; font-weight: 600; }
+    .filter-btn.active { background: var(--primary) !important; color: #fff !important; border-color: var(--primary) !important; }
+    .emp-row { transition: background 0.15s; }
+    .emp-row:hover { background: var(--glass) !important; }
+
+    /* Role selector inside change-role dropdown */
+    .role-option {
+      display: flex; align-items: center; gap: 8px; padding: 0.4rem 0.75rem;
+      cursor: pointer; border-radius: 6px; transition: background 0.15s;
+      font-size: 0.82rem; font-weight: 600;
+    }
+    .role-option:hover { background: var(--glass); }
+    .role-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  </style>
 </head>
 <body>
   <div id="admin-layout"></div>
+
+  <!-- Add / Edit Staff Modal -->
+  <div class="modal fade" id="staffModal" tabindex="-1" aria-labelledby="staffModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+      <div class="modal-content" style="border:1px solid var(--border);background:var(--bg-card)">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="staffModalLabel">
+            <i class="fa-solid fa-user-plus me-2" style="color:var(--primary)"></i>Add New Staff / User
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label small fw-600">Full Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="staff-name" placeholder="e.g. Ramesh Kumar">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" id="staff-email" placeholder="name@foodhub.com">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Phone</label>
+              <input type="tel" class="form-control" id="staff-phone" placeholder="+91 98765 43210">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Role <span class="text-danger">*</span></label>
+              <select class="form-select" id="staff-role">
+                <option value="">— Select Role —</option>
+                <option value="manager">Manager</option>
+                <option value="chef">Chef</option>
+                <option value="waiter">Waiter</option>
+                <option value="cashier">Cashier</option>
+                <option value="customer">Customer / User</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Password <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="staff-password" placeholder="Min. 6 characters">
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePwd()" id="pwd-eye-btn">
+                  <i class="fa-solid fa-eye" id="pwd-eye-icon"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-info small mt-3 mb-0 py-2">
+            <i class="fa-solid fa-circle-info me-1"></i>
+            Staff can log in at <strong>/pages/login.html</strong> with these credentials.
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary fw-600" id="staff-save-btn" onclick="saveStaff()">
+            <i class="fa-solid fa-floppy-disk me-1"></i>Create Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -20,95 +111,321 @@
     if (!Admin.requireAdmin()) throw new Error('Unauthorized');
 
     document.getElementById('admin-layout').innerHTML = Admin.layout('employees', `
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-          <h4 class="mb-0 fw-bold">Employee Directory & Shifts</h4>
-          <p class="text-muted small mb-0">Manage chefs, waiters, cashiers, and view shifts</p>
+          <h4 class="mb-0 fw-bold"><i class="fa-solid fa-id-badge me-2" style="color:var(--primary)"></i>Employee & User Management</h4>
+          <p class="text-muted small mb-0">Add staff, assign roles, and manage all accounts</p>
         </div>
+        <button class="btn btn-primary fw-600" data-bs-toggle="modal" data-bs-target="#staffModal">
+          <i class="fa-solid fa-user-plus me-2"></i>Add Staff / User
+        </button>
       </div>
 
-      <!-- Employee Grid -->
+      <!-- Stats Row -->
+      <div class="row g-3 mb-4" id="emp-stats-row">
+        <div class="col-12 text-center py-2"><div class="spinner-border spinner-border-sm" style="color:var(--primary)"></div></div>
+      </div>
+
+      <!-- Search + Filter -->
       <div class="glass-card no-hover p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+          <div class="d-flex flex-wrap gap-2" id="role-filter-btns">
+            <button class="btn btn-outline-secondary filter-btn active" data-role="all" onclick="setFilter('all',this)">All</button>
+            <button class="btn btn-outline-secondary filter-btn" data-role="admin" onclick="setFilter('admin',this)">Admin</button>
+            <button class="btn btn-outline-secondary filter-btn" data-role="manager" onclick="setFilter('manager',this)">Manager</button>
+            <button class="btn btn-outline-secondary filter-btn" data-role="chef" onclick="setFilter('chef',this)">Chef</button>
+            <button class="btn btn-outline-secondary filter-btn" data-role="waiter" onclick="setFilter('waiter',this)">Waiter</button>
+            <button class="btn btn-outline-secondary filter-btn" data-role="cashier" onclick="setFilter('cashier',this)">Cashier</button>
+            <button class="btn btn-outline-secondary filter-btn" data-role="customer" onclick="setFilter('customer',this)">Customer</button>
+          </div>
+          <div class="input-group" style="max-width:260px">
+            <span class="input-group-text" style="background:var(--bg);border:1px solid var(--border)">
+              <i class="fa-solid fa-magnifying-glass text-muted"></i>
+            </span>
+            <input type="text" class="form-control" id="emp-search" placeholder="Search name or email…" oninput="renderTable()">
+          </div>
+        </div>
+
         <div class="table-responsive hide-scroll">
-          <table class="table align-middle">
+          <table class="table align-middle mb-0">
             <thead>
-              <tr>
-                <th>Employee Name</th>
-                <th>Role</th>
-                <th>Shift Type</th>
-                <th>Daily Attendance</th>
-                <th>Status</th>
-                <th class="text-end">Actions</th>
+              <tr style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted)">
+                <th style="font-weight:600">Employee</th>
+                <th style="font-weight:600">Role</th>
+                <th style="font-weight:600">Phone</th>
+                <th style="font-weight:600">Joined</th>
+                <th style="font-weight:600">Status</th>
+                <th style="font-weight:600" class="text-end">Actions</th>
               </tr>
             </thead>
             <tbody id="employees-table-body">
-              <tr>
-                <td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm"></div> Loading staff list...</td>
-              </tr>
+              <tr><td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm"></div> Loading…</td></tr>
             </tbody>
           </table>
         </div>
+        <div id="emp-pagination" class="d-flex justify-content-end align-items-center gap-2 mt-3" style="font-size:0.82rem;color:var(--text-muted)"></div>
       </div>
     `);
 
+    /* ── State ─────────────────────────────────────────── */
+    let allUsers = [];
+    let currentFilter = 'all';
+    const PAGE_SIZE = 10;
+    let currentPage = 1;
+
+    const ROLE_COLORS = {
+      admin: '#ff6b35', manager: '#4361ee', chef: '#e63946',
+      waiter: '#2ec4b6', cashier: '#c9960a', customer: '#28a745'
+    };
+    const ROLE_ICONS = {
+      admin: 'fa-shield-halved', manager: 'fa-chart-line', chef: 'fa-fire-burner',
+      waiter: 'fa-bell-concierge', cashier: 'fa-cash-register', customer: 'fa-user'
+    };
+
+    /* ── Load ──────────────────────────────────────────── */
     async function loadEmployees() {
-      const tbody = document.getElementById('employees-table-body');
-
       try {
-        const res = await API.request('/admin/users'); // Retrieve directory list
-        const users = res.data || [];
-
-        // Filter out simple customers to list only employee roles
-        const staffRoles = ['admin', 'chef', 'waiter', 'cashier', 'manager'];
-        const staff = users.filter(u => staffRoles.includes(u.role));
-
-        if (staff.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No staff users seeded yet. Use seed script.</td></tr>';
-          return;
-        }
-
-        const shifts = ['Morning Shift', 'Afternoon Shift', 'Evening Shift', 'Night Shift'];
-
-        tbody.innerHTML = staff.map((s, index) => {
-          const shift = shifts[index % shifts.length];
-          return `
-            <tr id="staff-row-${s.id}">
-              <td>
-                <div class="fw-bold">${s.name}</div>
-                <div class="small text-muted">${s.email} · ${s.phone}</div>
-              </td>
-              <td><span class="badge bg-primary text-capitalize">${s.role}</span></td>
-              <td><span class="badge bg-secondary">${shift}</span></td>
-              <td>
-                <span class="badge bg-success" id="attendance-${s.id}">Present (Check-In)</span>
-              </td>
-              <td>
-                <span class="badge bg-${s.is_active ? 'success' : 'danger'}">${s.is_active ? 'Active' : 'Suspended'}</span>
-              </td>
-              <td class="text-end">
-                <button class="btn btn-sm btn-outline-secondary me-1" onclick="toggleAttendance(${s.id})">
-                  <i class="fa-solid fa-clock"></i> Log Check-Out
-                </button>
-              </td>
-            </tr>`;
-        }).join('');
-
+        const res = await API.getUsers();
+        allUsers = res.data || [];
+        renderStats();
+        renderTable();
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">${err.message}</td></tr>`;
+        document.getElementById('employees-table-body').innerHTML =
+          `<tr><td colspan="6" class="text-center text-danger py-4">${err.message}</td></tr>`;
       }
     }
 
-    function toggleAttendance(id) {
-      const badge = document.getElementById(`attendance-${id}`);
-      if (badge.textContent.includes('Present')) {
-        badge.textContent = 'Checked-Out';
-        badge.className = 'badge bg-danger';
-        Utils.showToast('Employee log check-out registered', 'info');
+    function renderStats() {
+      const counts = {};
+      ['admin','manager','chef','waiter','cashier','customer'].forEach(r => counts[r] = 0);
+      allUsers.forEach(u => { if (counts[u.role] !== undefined) counts[u.role]++; });
+
+      document.getElementById('emp-stats-row').innerHTML = [
+        { role: 'admin',    label: 'Admins',    icon: 'fa-shield-halved'  },
+        { role: 'manager',  label: 'Managers',  icon: 'fa-chart-line'     },
+        { role: 'chef',     label: 'Chefs',     icon: 'fa-fire-burner'    },
+        { role: 'waiter',   label: 'Waiters',   icon: 'fa-bell-concierge' },
+        { role: 'cashier',  label: 'Cashiers',  icon: 'fa-cash-register'  },
+        { role: 'customer', label: 'Customers', icon: 'fa-users'          },
+      ].map(({ role, label, icon }) => {
+        const color = ROLE_COLORS[role];
+        return `
+          <div class="col-6 col-sm-4 col-xl-2">
+            <div class="glass-card no-hover p-3 text-center" style="border-top:3px solid ${color}" onclick="setFilter('${role}',null)" role="button">
+              <i class="fa-solid ${icon} mb-1" style="color:${color};font-size:1.3rem"></i>
+              <div class="fw-800 fs-5">${counts[role]}</div>
+              <div class="small text-muted">${label}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function setFilter(role, btn) {
+      currentFilter = role;
+      currentPage = 1;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      if (btn) {
+        btn.classList.add('active');
       } else {
-        badge.textContent = 'Present (Check-In)';
-        badge.className = 'badge bg-success';
-        Utils.showToast('Employee log check-in registered', 'success');
+        // called from stat card — match the button
+        document.querySelector(`.filter-btn[data-role="${role}"]`)?.classList.add('active');
       }
+      renderTable();
+    }
+
+    function renderTable() {
+      const search = (document.getElementById('emp-search')?.value || '').toLowerCase();
+      let filtered = allUsers.filter(u => {
+        if (currentFilter !== 'all' && u.role !== currentFilter) return false;
+        if (search && !u.name?.toLowerCase().includes(search) && !u.email?.toLowerCase().includes(search)) return false;
+        return true;
+      });
+
+      const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+      if (currentPage > totalPages) currentPage = 1;
+      const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+      const tbody = document.getElementById('employees-table-body');
+      if (!paged.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted">
+          <i class="fa-solid fa-users-slash fa-2x mb-2 d-block"></i>No users found
+        </td></tr>`;
+      } else {
+        tbody.innerHTML = paged.map(u => {
+          const color = ROLE_COLORS[u.role] || '#6c757d';
+          const icon  = ROLE_ICONS[u.role]  || 'fa-user';
+          const initials = (u.name || 'U').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+          const joined = u.created_at ? new Date(u.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+          return `
+            <tr class="emp-row" id="emp-row-${u.id}">
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  <div class="staff-avatar" style="background:${color}20;color:${color}">${initials}</div>
+                  <div>
+                    <div class="fw-bold small">${escHtml(u.name)}</div>
+                    <div class="text-muted" style="font-size:0.75rem">${escHtml(u.email)}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="role-badge role-${u.role}">
+                  <i class="fa-solid ${icon} me-1"></i>${u.role}
+                </span>
+              </td>
+              <td class="small text-muted">${escHtml(u.phone || '—')}</td>
+              <td class="small text-muted">${joined}</td>
+              <td>
+                <span class="badge rounded-pill" style="background:${u.is_active !== false ? '#28a74520' : '#dc354520'};color:${u.is_active !== false ? '#28a745' : '#dc3545'}">
+                  ${u.is_active !== false ? 'Active' : 'Suspended'}
+                </span>
+              </td>
+              <td class="text-end">
+                <div class="d-flex justify-content-end gap-2">
+                  <!-- Change Role dropdown -->
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" title="Change Role"
+                            data-bs-toggle="dropdown" data-bs-auto-close="true" style="font-size:0.75rem">
+                      <i class="fa-solid fa-user-gear me-1"></i>Role
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:170px;padding:0.4rem">
+                      ${buildRoleOptions(u.id, u.role)}
+                    </ul>
+                  </div>
+                  <!-- Delete -->
+                  <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteUser(${u.id},'${escHtml(u.name)}')">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>`;
+        }).join('');
+      }
+
+      // Pagination
+      const pEl = document.getElementById('emp-pagination');
+      if (totalPages <= 1) { pEl.innerHTML = `<span>${filtered.length} record${filtered.length!==1?'s':''}</span>`; return; }
+      let pages = '';
+      for (let i = 1; i <= totalPages; i++) {
+        pages += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline-secondary'}" onclick="gotoPage(${i})" style="min-width:32px">${i}</button>`;
+      }
+      pEl.innerHTML = `<span class="me-2">${filtered.length} record${filtered.length!==1?'s':''}</span>${pages}`;
+    }
+
+    function gotoPage(n) { currentPage = n; renderTable(); }
+
+    function buildRoleOptions(userId, currentRole) {
+      const roles = [
+        { value: 'admin',    label: 'Admin',    color: '#ff6b35', icon: 'fa-shield-halved'  },
+        { value: 'manager',  label: 'Manager',  color: '#4361ee', icon: 'fa-chart-line'     },
+        { value: 'chef',     label: 'Chef',     color: '#e63946', icon: 'fa-fire-burner'    },
+        { value: 'waiter',   label: 'Waiter',   color: '#2ec4b6', icon: 'fa-bell-concierge' },
+        { value: 'cashier',  label: 'Cashier',  color: '#c9960a', icon: 'fa-cash-register'  },
+        { value: 'customer', label: 'Customer', color: '#28a745', icon: 'fa-user'           },
+      ];
+      return roles.map(r => `
+        <li>
+          <button class="dropdown-item role-option ${r.value === currentRole ? 'fw-bold' : ''}"
+                  onclick="changeRole(${userId},'${r.value}')">
+            <span class="role-dot" style="background:${r.color}"></span>
+            <i class="fa-solid ${r.icon}" style="color:${r.color};width:14px"></i>
+            ${r.label}
+            ${r.value === currentRole ? '<i class="fa-solid fa-check ms-auto" style="color:var(--primary)"></i>' : ''}
+          </button>
+        </li>`).join('');
+    }
+
+    /* ── Actions ───────────────────────────────────────── */
+    async function changeRole(userId, newRole) {
+      try {
+        await API.updateUserRole(userId, newRole);
+        // Update local state
+        const idx = allUsers.findIndex(u => u.id === userId);
+        if (idx !== -1) allUsers[idx].role = newRole;
+        renderStats();
+        renderTable();
+        Utils.showToast(`Role updated to "${newRole}" ✓`, 'success');
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    }
+
+    async function deleteUser(userId, name) {
+      const { isConfirmed } = await Swal.fire({
+        title: 'Delete User?',
+        html: `Remove <strong>${name}</strong> from the system?<br><small class="text-muted">This cannot be undone.</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Yes, Delete',
+        cancelButtonText: 'Cancel',
+        background: 'var(--bg-card)',
+        color: 'var(--text)'
+      });
+      if (!isConfirmed) return;
+      try {
+        await API.deleteUser(userId);
+        allUsers = allUsers.filter(u => u.id !== userId);
+        renderStats();
+        renderTable();
+        Utils.showToast(`"${name}" removed ✓`, 'success');
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    }
+
+    /* ── Add Staff Modal ───────────────────────────────── */
+    const staffModalEl = document.getElementById('staffModal');
+    const staffModal   = staffModalEl ? new bootstrap.Modal(staffModalEl) : null;
+
+    function togglePwd() {
+      const inp = document.getElementById('staff-password');
+      const icon = document.getElementById('pwd-eye-icon');
+      if (inp.type === 'password') {
+        inp.type = 'text'; icon.className = 'fa-solid fa-eye-slash';
+      } else {
+        inp.type = 'password'; icon.className = 'fa-solid fa-eye';
+      }
+    }
+
+    async function saveStaff() {
+      const name     = document.getElementById('staff-name').value.trim();
+      const email    = document.getElementById('staff-email').value.trim();
+      const phone    = document.getElementById('staff-phone').value.trim();
+      const role     = document.getElementById('staff-role').value;
+      const password = document.getElementById('staff-password').value;
+
+      if (!name || !email || !role || !password) {
+        Utils.showToast('Please fill all required fields', 'error'); return;
+      }
+      if (password.length < 6) {
+        Utils.showToast('Password must be at least 6 characters', 'error'); return;
+      }
+
+      const btn = document.getElementById('staff-save-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creating…';
+
+      try {
+        const res = await API.createStaffUser({ name, email, phone, password, role });
+        allUsers.unshift(res.data);
+        renderStats();
+        renderTable();
+        staffModal?.hide();
+        // Reset form
+        ['staff-name','staff-email','staff-phone','staff-password'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('staff-role').value = '';
+        Utils.showToast(`${role} account created for ${name} ✓`, 'success');
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>Create Account';
+      }
+    }
+
+    /* ── Helpers ───────────────────────────────────────── */
+    function escHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     loadEmployees();

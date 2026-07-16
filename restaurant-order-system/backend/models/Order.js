@@ -46,6 +46,32 @@ const Order = {
         [orderDbId, orderData.total_amount, orderData.payment_method, orderData.payment_method === 'COD' ? 'pending' : 'completed']
       );
 
+      // Auto-create a kitchen_orders entry so the Chef KDS, Waiter portal,
+      // and Cashier station can immediately see the new order.
+      let tableNumber = null;
+      if (orderData.table_id) {
+        try {
+          const [tableRows] = await connection.execute(
+            'SELECT table_number FROM restaurant_tables WHERE id = ?',
+            [orderData.table_id]
+          );
+          if (tableRows[0]) tableNumber = tableRows[0].table_number;
+        } catch (e) { /* non-critical */ }
+      }
+
+      await connection.execute(
+        `INSERT INTO kitchen_orders
+           (order_id, order_ref, table_number, order_type, status, priority, notes)
+         VALUES (?, ?, ?, ?, 'new', 'normal', ?)`,
+        [
+          orderDbId,
+          orderData.order_id,
+          tableNumber,
+          orderData.order_type || 'delivery',
+          orderData.order_notes || null
+        ]
+      );
+
       await connection.commit();
       return this.findByOrderId(orderData.order_id);
     } catch (error) {

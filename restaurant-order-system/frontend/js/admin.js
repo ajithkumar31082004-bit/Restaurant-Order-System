@@ -70,6 +70,7 @@ const Admin = {
       { id: 'categories', icon: 'fa-layer-group',    label: 'Categories',  href: 'categories.html' },
       { id: 'coupons',    icon: 'fa-tag',            label: 'Coupons',     href: 'coupons.html'    },
       { id: 'customers',  icon: 'fa-users',          label: 'Customers',   href: 'customers.html'  },
+      { id: 'employees',  icon: 'fa-id-badge',       label: 'Employees',   href: 'employees.html'  },
       { id: 'kitchen',    icon: 'fa-fire-burner',    label: 'Kitchen',     href: 'kitchen.html'    },
       { id: 'waiter',     icon: 'fa-bell-concierge', label: 'Waiter Board',href: 'waiter.html'     },
       { id: 'manager',    icon: 'fa-chart-line',     label: 'Manager',     href: 'manager.html'    },

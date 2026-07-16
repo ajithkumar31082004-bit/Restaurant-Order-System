@@ -72,6 +72,8 @@ const API = {
   getDashboard: () => API.request('/admin/dashboard'),
   getUsers: () => API.request('/admin/users'),
   deleteUser: (id) => API.request(`/admin/users/${id}`, { method: 'DELETE' }),
+  updateUserRole: (id, role) => API.request(`/admin/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
+  createStaffUser: (data) => API.request('/admin/staff', { method: 'POST', body: JSON.stringify(data) }),
   exportOrders: () => `${API.baseURL}/admin/export/orders?token=${API.getToken()}`,
   getOffers: () => API.request('/admin/offers', { auth: false }),
   updateOrderStatus: (id, status) => API.request(`/orders/${id}`, {
