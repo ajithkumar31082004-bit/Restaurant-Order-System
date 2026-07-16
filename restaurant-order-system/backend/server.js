@@ -177,6 +177,18 @@ app.listen(PORT, async () => {
   try {
     await pool.execute('SELECT 1');
     console.log('MySQL connected successfully');
+    
+    // Auto-migrate orders ENUM to include 'Ready' and 'Served' for Dine-In tracking
+    try {
+      await pool.execute(`
+        ALTER TABLE orders 
+        MODIFY COLUMN order_status ENUM('Pending', 'Confirmed', 'Preparing', 'Cooking', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled', 'Ready', 'Served') 
+        DEFAULT 'Pending'
+      `);
+      console.log('Database orders table status ENUM verified/migrated successfully.');
+    } catch (migErr) {
+      console.warn('ENUM migration warning:', migErr.message);
+    }
   } catch (e) {
     console.error('MySQL connection failed:', e.message);
   }
