@@ -18,7 +18,7 @@ const Cart = {
   addItem(food, qty = 1) {
     if (typeof Utils !== 'undefined') {
       const u = Utils.getUser();
-      if (u && u.role !== 'user') {
+      if (u && u.role !== 'customer') {
         Utils.showToast('Staff and admins cannot place customer orders. Please login as a customer.', 'warning');
         return;
       }
