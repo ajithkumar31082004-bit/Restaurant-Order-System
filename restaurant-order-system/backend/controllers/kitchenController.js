@@ -70,11 +70,14 @@ const kitchenController = {
       );
 
       // Mirror status to the parent order
+      // These values must match the dine-in timeline steps:
+      // ['Pending','Confirmed','Preparing','Cooking','Ready','Served']
       const statusMap = {
         accepted: 'Confirmed',
         preparing: 'Preparing',
-        ready: 'Cooking',
-        served: 'Delivered'
+        ready: 'Ready',
+        served: 'Served',
+        cancelled: 'Cancelled'
       };
       if (statusMap[status]) {
         const [ko] = await pool.execute('SELECT order_id FROM kitchen_orders WHERE id = ?', [req.params.id]);
@@ -83,6 +86,19 @@ const kitchenController = {
             'UPDATE orders SET order_status = ? WHERE id = ?',
             [statusMap[status], ko[0].order_id]
           );
+
+          // Free the table if status is Served or Cancelled
+          if (['Served', 'Cancelled'].includes(statusMap[status])) {
+            try {
+              const [orders] = await pool.execute('SELECT table_id FROM orders WHERE id = ?', [ko[0].order_id]);
+              if (orders[0] && orders[0].table_id) {
+                await pool.execute("UPDATE restaurant_tables SET status = 'available' WHERE id = ?", [orders[0].table_id]);
+                console.log(`[Auto-Free Table] Table ID ${orders[0].table_id} is now available after kitchen status mirror`);
+              }
+            } catch (tableErr) {
+              console.warn('Table auto-free during kitchen status mirror failed:', tableErr.message);
+            }
+          }
         }
       }
 

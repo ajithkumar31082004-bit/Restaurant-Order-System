@@ -281,7 +281,7 @@ const orderController = {
   async updateStatus(req, res, next) {
     try {
       const { status } = req.body;
-      const validStatuses = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled'];
+      const validStatuses = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Ready', 'Served', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled'];
 
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ success: false, message: 'Invalid status' });
@@ -371,6 +371,19 @@ const orderController = {
         active: index === currentIndex
       }));
 
+      // Fetch actual table_number for dine-in orders
+      let tableNumber = null;
+      if (isDineIn && order.table_id) {
+        try {
+          const pool = require('../config/database');
+          const [tableRows] = await pool.execute(
+            'SELECT table_number FROM restaurant_tables WHERE id = ?',
+            [order.table_id]
+          );
+          if (tableRows[0]) tableNumber = tableRows[0].table_number;
+        } catch (e) { /* non-critical */ }
+      }
+
       res.json({
         success: true,
         data: {
@@ -380,6 +393,7 @@ const orderController = {
           paymentMethod: order.payment_method,
           orderType: order.order_type || 'delivery',
           tableId: order.table_id || null,
+          tableNumber: tableNumber,
           timeline
         }
       });

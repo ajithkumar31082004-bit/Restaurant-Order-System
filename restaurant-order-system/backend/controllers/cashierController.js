@@ -201,6 +201,17 @@ const cashierController = {
         [order_id]
       );
 
+      // Free the table for this order
+      try {
+        const [orders] = await pool.execute('SELECT table_id FROM orders WHERE order_id = ?', [order_id]);
+        if (orders[0] && orders[0].table_id) {
+          await pool.execute("UPDATE restaurant_tables SET status = 'available' WHERE id = ?", [orders[0].table_id]);
+          console.log(`[Auto-Free Table] Table ID ${orders[0].table_id} is now available after refund/cancel`);
+        }
+      } catch (tableErr) {
+        console.warn('Table auto-free during refund failed:', tableErr.message);
+      }
+
       // Mark payment as refunded (join via subquery)
       await pool.execute(
         `UPDATE payments p

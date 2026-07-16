@@ -161,10 +161,33 @@ const Order = {
       `UPDATE orders SET ${fields.join(', ')} WHERE order_id = ?`,
       values
     );
+
+    // Auto-free the table if the order is Delivered, Cancelled, or Served
+    if (['Delivered', 'Cancelled', 'Served'].includes(status)) {
+      try {
+        const [orders] = await pool.execute('SELECT table_id FROM orders WHERE order_id = ?', [orderId]);
+        if (orders[0] && orders[0].table_id) {
+          await pool.execute("UPDATE restaurant_tables SET status = 'available' WHERE id = ?", [orders[0].table_id]);
+          console.log(`[Auto-Free Table] Table ID ${orders[0].table_id} is now available`);
+        }
+      } catch (err) {
+        console.error('Error auto-freeing table in updateStatus:', err.message);
+      }
+    }
+
     return this.findByOrderId(orderId);
   },
 
   async delete(orderId) {
+    try {
+      const [orders] = await pool.execute('SELECT table_id FROM orders WHERE order_id = ?', [orderId]);
+      if (orders[0] && orders[0].table_id) {
+        await pool.execute("UPDATE restaurant_tables SET status = 'available' WHERE id = ?", [orders[0].table_id]);
+        console.log(`[Auto-Free Table] Table ID ${orders[0].table_id} is now available before deleting order`);
+      }
+    } catch (e) {
+      console.warn('Error freeing table before deleting order:', e.message);
+    }
     const [result] = await pool.execute('DELETE FROM orders WHERE order_id = ?', [orderId]);
     return result.affectedRows > 0;
   },

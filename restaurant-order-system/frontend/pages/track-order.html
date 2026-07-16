@@ -247,8 +247,12 @@
     const deliverySteps = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Packed', 'Out for Delivery', 'Delivered'];
     const dineInSteps   = ['Pending', 'Confirmed', 'Preparing', 'Cooking', 'Ready', 'Served'];
 
+    let autoRefreshTimer = null;
+    let lastTrackedOrderId = null;
+
     async function trackOrder(orderId) {
       if (!orderId) return;
+      lastTrackedOrderId = orderId;
       Utils.showLoader(true);
       try {
         const res = await API.trackOrder(orderId);
@@ -301,7 +305,9 @@
         const banner = document.getElementById('dine-in-banner');
         if (isDineIn) {
           banner.style.display = 'flex';
-          if (tracker.tableId) {
+          if (tracker.tableNumber) {
+            document.getElementById('dine-in-table-label').textContent = `· Table ${tracker.tableNumber}`;
+          } else if (tracker.tableId) {
             document.getElementById('dine-in-table-label').textContent = `· Table T-${String(tracker.tableId).padStart(2,'0')}`;
           }
         } else {
@@ -342,6 +348,18 @@
       } finally {
         Utils.showLoader(false);
       }
+
+      // If order is not yet completed, auto-refresh every 10 s
+      clearInterval(autoRefreshTimer);
+      const terminalStatuses = ['Delivered','Served','Cancelled'];
+      try {
+        const latest = await API.trackOrder(lastTrackedOrderId);
+        if (!terminalStatuses.includes(latest?.data?.currentStatus)) {
+          autoRefreshTimer = setInterval(() => {
+            if (lastTrackedOrderId) trackOrder(lastTrackedOrderId);
+          }, 10000);
+        }
+      } catch(e) {}
     }
 
     document.getElementById('track-btn').addEventListener('click', () => {
