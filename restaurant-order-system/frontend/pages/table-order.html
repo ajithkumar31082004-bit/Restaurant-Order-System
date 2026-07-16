@@ -478,6 +478,14 @@
     let localCart = [];
 
     function addToTableCart(id, name, price) {
+      if (typeof Utils !== 'undefined') {
+        const u = Utils.getUser();
+        if (!u || u.role !== 'user') {
+          Utils.showToast('Only customers can place orders. Please login as a user.', 'warning');
+          return;
+        }
+      }
+
       const existing = localCart.find(i => i.id === id);
       if (existing) {
         existing.qty++;

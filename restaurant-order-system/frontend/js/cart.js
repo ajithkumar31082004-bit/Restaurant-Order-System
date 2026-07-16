@@ -16,6 +16,14 @@ const Cart = {
   },
 
   addItem(food, qty = 1) {
+    if (typeof Utils !== 'undefined') {
+      const u = Utils.getUser();
+      if (!u || u.role !== 'user') {
+        Utils.showToast('Only customers can place orders. Please login as a user.', 'warning');
+        return;
+      }
+    }
+
     const items = this.getItems();
     const existing = items.find(i => i.id === food.id);
     const price = food.discount_price || food.price;
