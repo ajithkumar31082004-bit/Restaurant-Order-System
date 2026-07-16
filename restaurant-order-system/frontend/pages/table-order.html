@@ -7,15 +7,125 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="../css/style.css" rel="stylesheet">
+  <style>
+    /* ── Self-Service Kiosk Mode ─────────────────────── */
+    body.kiosk-mode #navbar,
+    body.kiosk-mode #footer,
+    body.kiosk-mode .page-header p,
+    body.kiosk-mode #table-order-hint,
+    body.kiosk-mode .mt-4.p-4.rounded-4 { display: none !important; }
+
+    body.kiosk-mode { background: #0d0d1a !important; color: #f0f0f8 !important; }
+    body.kiosk-mode .page-header { background: linear-gradient(135deg,#ff6b35,#ffba08); padding: 1.5rem 0; }
+    body.kiosk-mode .page-header h1 { font-size: 2rem; color: #fff; }
+    body.kiosk-mode .page-header h3 { font-size: 1.4rem; }
+
+    /* Large kiosk food cards */
+    body.kiosk-mode #menu-items-grid .col-md-6 { flex: 0 0 33.333%; max-width: 33.333%; }
+    body.kiosk-mode #menu-items-grid .d-flex { flex-direction: column; align-items: center; text-align: center; padding: 1rem !important; gap: 0.75rem !important; }
+    body.kiosk-mode #menu-items-grid img { width: 100px !important; height: 100px !important; border-radius: 16px !important; }
+    body.kiosk-mode #menu-items-grid .btn { font-size: 1rem; padding: 0.5rem 1.25rem; width: 100%; }
+    body.kiosk-mode #menu-items-grid .fw-bold { font-size: 1rem; }
+
+    /* Kiosk floating cart */
+    #kiosk-float-cart {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 1050;
+      background: linear-gradient(135deg, #ff6b35, #ffba08);
+      color: #fff; padding: 1rem 2rem;
+      box-shadow: 0 -4px 24px rgba(255,107,53,0.4);
+      cursor: pointer;
+    }
+    body.kiosk-mode #kiosk-float-cart { display: flex; align-items: center; justify-content: space-between; }
+
+    /* Kiosk toggle button */
+    #kiosk-toggle-btn {
+      position: fixed; top: 80px; right: 16px; z-index: 1100;
+      border-radius: 50px; font-size: 0.8rem; font-weight: 700;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+
+    /* Kiosk cart modal */
+    #kioskCartModal .modal-content {
+      background: rgba(13,13,26,0.97);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+    }
+  </style>
 </head>
 <body>
   <div id="navbar"></div>
+
+  <!-- Kiosk toggle button (always visible) -->
+  <button id="kiosk-toggle-btn" class="btn btn-sm" onclick="toggleKioskMode()"
+    style="background:var(--primary);color:#fff;border:none">
+    <i class="fa-solid fa-display me-1" id="kiosk-btn-icon"></i>
+    <span id="kiosk-btn-label">Self-Service</span>
+  </button>
 
   <div class="page-header">
     <div class="container text-center">
       <h1><i class="fa-solid fa-qrcode me-2"></i>Dine-In Table Order</h1>
       <h3 class="fw-bold mt-2" style="color:var(--primary)"><span id="table-label">Table T-01</span></h3>
       <p class="text-muted">Place your order directly to the kitchen. No waiter required.</p>
+    </div>
+  </div>
+
+  <!-- Kiosk Floating Cart Bar -->
+  <div id="kiosk-float-cart" onclick="document.getElementById('kioskCartModal').querySelector('[data-bs-toggle]')?.click(); openKioskCart()">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa-solid fa-cart-shopping fa-lg"></i>
+      <div>
+        <div class="fw-bold" style="font-size:1rem" id="kiosk-cart-label">0 items</div>
+        <div style="font-size:0.8rem;opacity:0.85">Tap to review & place order</div>
+      </div>
+    </div>
+    <div class="fw-bold" style="font-size:1.3rem" id="kiosk-cart-total-float">₹0.00</div>
+  </div>
+
+  <!-- Kiosk Cart Modal -->
+  <div class="modal fade" id="kioskCartModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-cart-shopping me-2" style="color:#ff6b35"></i>Your Order</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="color:#f0f0f8">
+          <div id="kiosk-modal-cart-list" class="mb-3"></div>
+          <hr style="border-color:rgba(255,255,255,0.15)">
+          <div class="d-flex justify-content-between mb-1"><span class="text-muted">Subtotal</span><span id="km-subtotal">₹0.00</span></div>
+          <div class="d-flex justify-content-between mb-1"><span class="text-muted">GST (5%)</span><span id="km-gst">₹0.00</span></div>
+          <div class="d-flex justify-content-between mb-3"><span class="text-muted">Service (10%)</span><span id="km-service">₹0.00</span></div>
+          <div class="d-flex justify-content-between fw-bold" style="font-size:1.2rem;color:#ff6b35">
+            <span>Grand Total</span><span id="km-total">₹0.00</span>
+          </div>
+          <hr style="border-color:rgba(255,255,255,0.15)">
+          <div class="row g-3 mt-1">
+            <div class="col-6">
+              <label class="form-label small" style="color:#aaa">Your Name *</label>
+              <input type="text" class="form-control" id="kiosk-name" placeholder="Name" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#fff">
+            </div>
+            <div class="col-6">
+              <label class="form-label small" style="color:#aaa">Phone *</label>
+              <input type="tel" class="form-control" id="kiosk-phone" placeholder="10-digit" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#fff">
+            </div>
+            <div class="col-12">
+              <label class="form-label small" style="color:#aaa">Payment Method</label>
+              <select class="form-select" id="kiosk-payment" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:#fff">
+                <option value="COD">Pay at Counter (Cash/Card)</option>
+                <option value="UPI">UPI</option>
+                <option value="Credit Card">Credit Card</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn fw-bold px-4" style="background:linear-gradient(135deg,#ff6b35,#ffba08);color:#fff;border:none" onclick="placeKioskOrder()"
+            id="kiosk-place-btn"><i class="fa-solid fa-fire me-2"></i>Send to Kitchen</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -457,6 +567,140 @@
         btn.innerHTML = '<i class="fa-solid fa-fire me-1"></i>Send to Kitchen';
       }
     });
+
+    // ── Self-Service Kiosk Mode ──────────────────────────────────
+    let kioskModal = null;
+
+    function initKioskModal() {
+      if (!kioskModal) kioskModal = new bootstrap.Modal(document.getElementById('kioskCartModal'));
+    }
+
+    function toggleKioskMode() {
+      const isKiosk = document.body.classList.toggle('kiosk-mode');
+      sessionStorage.setItem('kioskMode', isKiosk ? '1' : '0');
+      const icon  = document.getElementById('kiosk-btn-icon');
+      const label = document.getElementById('kiosk-btn-label');
+      if (isKiosk) {
+        icon.className  = 'fa-solid fa-xmark me-1';
+        label.textContent = 'Exit Kiosk';
+        document.getElementById('kiosk-toggle-btn').style.background = '#dc3545';
+        Utils.showToast('Self-Service Kiosk Mode activated 🖥️', 'success');
+      } else {
+        icon.className  = 'fa-solid fa-display me-1';
+        label.textContent = 'Self-Service';
+        document.getElementById('kiosk-toggle-btn').style.background = 'var(--primary)';
+        Utils.showToast('Exited Kiosk Mode', 'info');
+      }
+      updateKioskCart();
+    }
+
+    function updateKioskCart() {
+      if (!document.body.classList.contains('kiosk-mode')) return;
+      const subtotal = localCart.reduce((s, i) => s + i.price * i.qty, 0);
+      const gst      = Math.round(subtotal * 0.05 * 100) / 100;
+      const service  = Math.round(subtotal * 0.10 * 100) / 100;
+      const total    = subtotal + gst + service;
+      const count    = localCart.reduce((s, i) => s + i.qty, 0);
+      const floatLabel = document.getElementById('kiosk-cart-label');
+      const floatTotal = document.getElementById('kiosk-cart-total-float');
+      if (floatLabel) floatLabel.textContent = count + ' item' + (count !== 1 ? 's' : '');
+      if (floatTotal) floatTotal.textContent = '₹' + total.toFixed(2);
+    }
+
+    function openKioskCart() {
+      initKioskModal();
+      const subtotal = localCart.reduce((s, i) => s + i.price * i.qty, 0);
+      const gst      = Math.round(subtotal * 0.05 * 100) / 100;
+      const service  = Math.round(subtotal * 0.10 * 100) / 100;
+      const total    = subtotal + gst + service;
+      // Fill modal cart
+      const el = document.getElementById('kiosk-modal-cart-list');
+      el.innerHTML = localCart.length ? localCart.map(i => `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <div class="fw-bold" style="color:#fff">${i.name}</div>
+            <div class="small" style="color:#aaa">₹${i.price.toFixed(2)} × ${i.qty}</div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-secondary px-2 py-0" onclick="changeQty(${i.id},-1);openKioskCart()">-</button>
+            <span style="color:#fff;min-width:20px;text-align:center">${i.qty}</span>
+            <button class="btn btn-sm btn-outline-secondary px-2 py-0" onclick="changeQty(${i.id},1);openKioskCart()">+</button>
+            <span class="fw-bold" style="color:#ff6b35;min-width:70px;text-align:right">₹${(i.price * i.qty).toFixed(2)}</span>
+          </div>
+        </div>`).join('') : '<p class="text-center" style="color:#aaa">Cart is empty</p>';
+      document.getElementById('km-subtotal').textContent = '₹' + subtotal.toFixed(2);
+      document.getElementById('km-gst').textContent      = '₹' + gst.toFixed(2);
+      document.getElementById('km-service').textContent  = '₹' + service.toFixed(2);
+      document.getElementById('km-total').textContent    = '₹' + total.toFixed(2);
+      // Pre-fill name/phone
+      const u = Utils.getUser();
+      if (u) {
+        const nameEl = document.getElementById('kiosk-name');
+        const phoneEl = document.getElementById('kiosk-phone');
+        if (nameEl && !nameEl.value) nameEl.value = u.name || '';
+        if (phoneEl && !phoneEl.value) phoneEl.value = u.phone || '';
+      }
+      kioskModal.show();
+    }
+
+    async function placeKioskOrder() {
+      if (!localCart.length) { Utils.showToast('Cart is empty!', 'warning'); return; }
+      const name    = document.getElementById('kiosk-name').value.trim();
+      const phone   = document.getElementById('kiosk-phone').value.trim();
+      const payment = document.getElementById('kiosk-payment').value;
+      if (!name || !phone) { Utils.showToast('Please enter your name and phone', 'error'); return; }
+      const btn = document.getElementById('kiosk-place-btn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending...';
+      const payload = {
+        name, phone, email: '', address: `Table ${tableNumber}`,
+        city: 'Dine-In', pincode: '000000', payment,
+        order_type: 'dine-in', table_id: tableId,
+        orderNotes: 'Self-service kiosk order.',
+        items: localCart.map(i => ({ foodId: i.id, name: i.name, qty: i.qty, price: i.price }))
+      };
+      try {
+        const res = await API.createOrder(payload);
+        kioskModal.hide();
+        localCart = [];
+        updateCartDisplay();
+        updateKioskCart();
+        Swal.fire({
+          icon: 'success', title: '🍕 Order Sent to Kitchen!',
+          html: `<p>Your order <strong>${res.data.orderId}</strong> is being prepared.</p>`,
+          confirmButtonColor: '#ff6b35', confirmButtonText: 'Track Order',
+          customClass: { popup: 'rounded-4' }
+        }).then(() => { window.location.href = `track-order.html?orderId=${res.data.orderId}`; });
+      } catch (err) {
+        Utils.showToast(err.message || 'Order failed.', 'error');
+        btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-fire me-2"></i>Send to Kitchen';
+      }
+    }
+
+    // Patch addToTableCart to also update kiosk float cart
+    const _origAdd = addToTableCart;
+    window.addToTableCart = function(id, name, price) {
+      _origAdd(id, name, price);
+      updateKioskCart();
+    };
+    const _origChangeQty = changeQty;
+    window.changeQty = function(id, delta) {
+      _origChangeQty(id, delta);
+      updateKioskCart();
+    };
+
+    // Activate kiosk mode from URL param or sessionStorage
+    (function() {
+      const p = new URLSearchParams(window.location.search);
+      const stored = sessionStorage.getItem('kioskMode');
+      if (p.get('kiosk') === '1' || stored === '1') {
+        document.body.classList.add('kiosk-mode');
+        document.getElementById('kiosk-btn-icon').className = 'fa-solid fa-xmark me-1';
+        document.getElementById('kiosk-btn-label').textContent = 'Exit Kiosk';
+        document.getElementById('kiosk-toggle-btn').style.background = '#dc3545';
+        if (stored !== '1') sessionStorage.setItem('kioskMode', '1');
+      }
+    })();
+    // ── End Kiosk Mode ──────────────────────────────────────────
 
     initPage();
   </script>

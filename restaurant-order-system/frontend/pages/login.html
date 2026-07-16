@@ -170,12 +170,20 @@
         Utils.showToast('Logged in successfully! Welcome back.', 'success');
         
         setTimeout(() => {
-          // Redirect admin to admin dashboard, others to requested page
-          if (user.role === 'admin' && redirectUrl === '/') {
-            window.location.href = '/pages/admin/dashboard.html';
-          } else {
+          // If there is an explicit redirect param, honour it
+          if (redirectUrl && redirectUrl !== '/') {
             window.location.href = redirectUrl;
+            return;
           }
+          // Otherwise route by role to the dedicated portal
+          const rolePortals = {
+            admin:    '/pages/admin/dashboard.html',
+            manager:  '/pages/admin/manager.html',
+            chef:     '/pages/admin/chef.html',
+            waiter:   '/pages/admin/waiter-portal.html',
+            cashier:  '/pages/admin/cashier.html',
+          };
+          window.location.href = rolePortals[user.role] || '/pages/index.html';
         }, 1200);
 
       } catch (err) {

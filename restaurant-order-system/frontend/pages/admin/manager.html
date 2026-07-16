@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Dashboard — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../../css/style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="admin-layout"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="../../js/api.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/admin.js"></script>
+  <script>
+    if (!Admin.requireRole('manager', 'admin')) throw new Error('Unauthorized');
+
+    const managerNav = [
+      { id: 'manager',   icon: 'fa-chart-line',      label: 'Overview',      href: 'manager.html'   },
+      { id: 'analytics', icon: 'fa-chart-bar',        label: 'Analytics',     href: 'manager.html#analytics' },
+      { id: 'orders',    icon: 'fa-bag-shopping',     label: 'Orders',        href: 'orders.html'    },
+      { id: 'waiter',    icon: 'fa-bell-concierge',   label: 'Waiter Board',  href: 'waiter.html'    },
+      { id: 'inventory', icon: 'fa-boxes-stacked',    label: 'Inventory',     href: 'inventory.html' },
+      { id: 'employees', icon: 'fa-users-gear',       label: 'Employees',     href: 'employees.html' },
+      { id: 'kitchen',   icon: 'fa-fire-burner',      label: 'Kitchen',       href: 'kitchen.html'   },
+      { id: 'dashboard', icon: 'fa-gauge-high',       label: 'Admin Panel',   href: 'dashboard.html' },
+    ];
+
+    document.getElementById('admin-layout').innerHTML = Admin.staffLayout('manager', `
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="mb-0 fw-bold">Manager Operations Dashboard</h4>
+          <p class="text-muted small mb-0">Revenue analytics, staffing overview, and real-time performance metrics</p>
+        </div>
+        <div class="d-flex gap-2">
+          <span id="live-clock" class="badge rounded-pill" style="background:var(--primary-light);color:var(--primary);font-size:0.85rem;padding:0.5rem 1rem;font-weight:600"></span>
+          <button class="btn btn-outline-secondary btn-sm" onclick="loadAll()"><i class="fa-solid fa-arrows-rotate"></i></button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="row g-3 mb-4" id="kpi-cards">
+        <div class="col-12 text-center py-4"><div class="spinner-border" style="color:var(--primary)"></div></div>
+      </div>
+
+      <!-- Charts Row 1 -->
+      <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+          <div class="glass-card no-hover p-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Revenue Trend (Last 14 Days)</h6>
+            <div style="height:260px"><canvas id="revenueChart"></canvas></div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="glass-card no-hover p-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-clock me-2 text-warning"></i>Peak Order Hours</h6>
+            <div style="height:260px"><canvas id="peakChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+          <div class="glass-card no-hover p-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-pizza-slice me-2 text-danger"></i>Order Types</h6>
+            <div style="height:220px"><canvas id="orderTypeChart"></canvas></div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="glass-card no-hover p-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Top Dishes</h6>
+            <div id="top-dishes-list" class="small"></div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="glass-card no-hover p-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-table me-2 text-info"></i>Table Utilization</h6>
+            <div style="height:220px"><canvas id="tableChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Alert + Customer Satisfaction -->
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="glass-card no-hover p-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation me-2 text-warning"></i>Low Stock Alerts</h6>
+            <div id="low-stock-list" class="small">
+              <div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="glass-card no-hover p-4">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-face-smile me-2 text-success"></i>Customer Satisfaction</h6>
+            <div id="satisfaction-data" class="small">
+              <div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `, managerNav, 'Manager Portal');
+
+    // Live clock
+    function updateClock() {
+      document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    let charts = {};
+
+    function destroyChart(key) {
+      if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+    }
+
+    async function loadAll() {
+      await Promise.all([loadKPIs(), loadRevenue(), loadPeakHours(), loadOrderTypes(), loadTopDishes(), loadTableUtil(), loadLowStock(), loadSatisfaction()]);
+    }
+
+    async function loadKPIs() {
+      try {
+        const res = await API.request('/analytics/summary');
+        const s = res.data || {};
+        document.getElementById('kpi-cards').innerHTML = `
+          ${kpiCard('fa-indian-rupee-sign', 'Today Revenue', '₹' + (s.today_revenue || 0).toLocaleString('en-IN'), '#ff6b35')}
+          ${kpiCard('fa-bag-shopping', 'Today Orders', s.today_orders || 0, '#4361ee')}
+          ${kpiCard('fa-users', 'Total Customers', s.total_customers || 0, '#2ec4b6')}
+          ${kpiCard('fa-chart-line', 'Monthly Revenue', '₹' + (s.monthly_revenue || 0).toLocaleString('en-IN'), '#ffba08')}
+          ${kpiCard('fa-hourglass-half', 'Avg Prep Time', (s.avg_prep_minutes || 0) + ' min', '#e63946')}
+          ${kpiCard('fa-star', 'Avg Rating', (s.avg_rating || 0).toFixed(1) + ' / 5', '#28a745')}
+        `;
+      } catch (e) {
+        document.getElementById('kpi-cards').innerHTML = `<div class="col-12 text-danger small">Could not load KPIs: ${e.message}</div>`;
+      }
+    }
+
+    function kpiCard(icon, label, value, color) {
+      return `<div class="col-6 col-xl-2">
+        <div class="glass-card no-hover p-3 text-center" style="border-top:3px solid ${color}">
+          <i class="fa-solid ${icon} fa-lg mb-2" style="color:${color}"></i>
+          <div class="fw-bold fs-5">${value}</div>
+          <div class="small text-muted">${label}</div>
+        </div>
+      </div>`;
+    }
+
+    async function loadRevenue() {
+      try {
+        const res = await API.request('/analytics/revenue');
+        const data = res.data || [];
+        destroyChart('revenue');
+        charts.revenue = new Chart(document.getElementById('revenueChart'), {
+          type: 'line',
+          data: {
+            labels: data.map(d => d.date),
+            datasets: [{
+              label: 'Revenue (₹)', data: data.map(d => d.revenue),
+              borderColor: '#ff6b35', backgroundColor: 'rgba(255,107,53,0.12)',
+              fill: true, tension: 0.4, pointRadius: 4
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+      } catch (e) { console.warn('Revenue chart error:', e.message); }
+    }
+
+    async function loadPeakHours() {
+      try {
+        const res = await API.request('/analytics/peak-hours');
+        const data = res.data || [];
+        destroyChart('peak');
+        charts.peak = new Chart(document.getElementById('peakChart'), {
+          type: 'bar',
+          data: {
+            labels: data.map(d => d.hour + ':00'),
+            datasets: [{ label: 'Orders', data: data.map(d => d.orders), backgroundColor: '#ffba08', borderRadius: 6 }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+      } catch (e) { console.warn('Peak hours error:', e.message); }
+    }
+
+    async function loadOrderTypes() {
+      try {
+        const res = await API.request('/analytics/order-types');
+        const data = res.data || [];
+        destroyChart('orderType');
+        charts.orderType = new Chart(document.getElementById('orderTypeChart'), {
+          type: 'doughnut',
+          data: {
+            labels: data.map(d => d.order_type),
+            datasets: [{ data: data.map(d => d.count), backgroundColor: ['#ff6b35','#2ec4b6','#ffba08','#4361ee'] }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      } catch (e) { console.warn('Order types error:', e.message); }
+    }
+
+    async function loadTopDishes() {
+      try {
+        const res = await API.request('/analytics/popular-dishes');
+        const data = res.data || [];
+        const el = document.getElementById('top-dishes-list');
+        el.innerHTML = data.length ? data.slice(0, 6).map((d, i) => `
+          <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+            <div>
+              <span class="badge me-2" style="background:var(--primary-light);color:var(--primary)">#${i+1}</span>
+              <span>${d.name}</span>
+            </div>
+            <span class="badge bg-success-subtle text-success">${d.total_sold || 0} sold</span>
+          </div>`).join('') : '<p class="text-muted">No sales data yet.</p>';
+      } catch (e) { console.warn('Top dishes error:', e.message); }
+    }
+
+    async function loadTableUtil() {
+      try {
+        const res = await API.request('/analytics/table-utilization');
+        const data = res.data || [];
+        destroyChart('table');
+        charts.table = new Chart(document.getElementById('tableChart'), {
+          type: 'bar',
+          data: {
+            labels: data.map(d => 'T-' + d.table_number),
+            datasets: [{ label: 'Orders', data: data.map(d => d.total_orders), backgroundColor: '#2ec4b6', borderRadius: 4 }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, indexAxis: 'y' }
+        });
+      } catch (e) { console.warn('Table util error:', e.message); }
+    }
+
+    async function loadLowStock() {
+      const el = document.getElementById('low-stock-list');
+      try {
+        const res = await API.getLowStockInventory();
+        const items = res.data || [];
+        el.innerHTML = items.length ? items.map(i => `
+          <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+            <span><i class="fa-solid fa-circle-exclamation me-2 text-warning"></i>${i.item_name}</span>
+            <span class="badge bg-warning-subtle text-warning">${i.quantity} ${i.unit} left</span>
+          </div>`).join('') : '<p class="text-success small mb-0"><i class="fa-solid fa-circle-check me-1"></i>All stock levels OK!</p>';
+      } catch (e) { el.innerHTML = `<p class="text-muted small">${e.message}</p>`; }
+    }
+
+    async function loadSatisfaction() {
+      const el = document.getElementById('satisfaction-data');
+      try {
+        const res = await API.request('/analytics/customer-satisfaction');
+        const d = res.data || {};
+        el.innerHTML = `
+          <div class="text-center mb-3">
+            <div class="display-4 fw-bold" style="color:var(--primary)">${(d.avg_rating || 0).toFixed(1)}</div>
+            <div class="text-muted small">Average Rating</div>
+            <div class="mt-2">${'⭐'.repeat(Math.round(d.avg_rating || 0))}</div>
+          </div>
+          <div class="d-flex justify-content-around text-center">
+            <div><div class="fw-bold text-success">${d.positive || 0}</div><div class="text-muted" style="font-size:0.7rem">Positive</div></div>
+            <div><div class="fw-bold text-warning">${d.neutral || 0}</div><div class="text-muted" style="font-size:0.7rem">Neutral</div></div>
+            <div><div class="fw-bold text-danger">${d.negative || 0}</div><div class="text-muted" style="font-size:0.7rem">Negative</div></div>
+          </div>`;
+      } catch (e) { el.innerHTML = `<p class="text-muted small">${e.message}</p>`; }
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>

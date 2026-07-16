@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cashier Station — FoodHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="../../css/style.css" rel="stylesheet">
+  <style>
+    .order-card { transition: all 0.25s ease; cursor: pointer; }
+    .order-card:hover { transform: translateY(-2px); }
+    .order-card.selected { border: 2px solid var(--primary) !important; }
+    .amount-badge { font-size: 1.1rem; font-weight: 700; }
+    .cashier-table th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }
+    .collection-card { border-left: 4px solid var(--primary); }
+  </style>
+</head>
+<body>
+  <div id="admin-layout"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../../js/api.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/admin.js"></script>
+  <script>
+    if (!Admin.requireRole('cashier', 'admin', 'manager')) throw new Error('Unauthorized');
+
+    const cashierNav = [
+      { id: 'cashier', icon: 'fa-cash-register', label: 'Cashier Station', href: 'cashier.html' },
+      { id: 'orders',  icon: 'fa-bag-shopping',  label: 'All Orders',      href: 'orders.html'  },
+    ];
+
+    document.getElementById('admin-layout').innerHTML = Admin.staffLayout('cashier', `
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="mb-0 fw-bold"><i class="fa-solid fa-cash-register me-2" style="color:#ffba08"></i>Cashier Station</h4>
+          <p class="text-muted small mb-0">Today's pending payments & bill management</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <span id="cashier-clock" class="badge rounded-pill" style="background:rgba(255,186,8,0.12);color:#ffba08;font-size:0.85rem;padding:0.5rem 1rem;font-weight:700"></span>
+          <button class="btn btn-outline-secondary btn-sm" id="cashier-refresh"><i class="fa-solid fa-arrows-rotate"></i></button>
+        </div>
+      </div>
+
+      <!-- Today's Collection Summary -->
+      <div class="row g-3 mb-4" id="collection-cards">
+        <div class="col-12 text-center py-2"><div class="spinner-border spinner-border-sm" style="color:#ffba08"></div></div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Pending Orders List -->
+        <div class="col-lg-7">
+          <div class="glass-card no-hover p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0"><i class="fa-solid fa-hourglass-half me-2 text-warning"></i>Pending Payment Orders</h5>
+              <span class="badge bg-warning text-dark" id="pending-count">0</span>
+            </div>
+            <div id="pending-orders-list">
+              <div class="text-center py-4"><div class="spinner-border spinner-border-sm" style="color:#ffba08"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bill Panel (right side) -->
+        <div class="col-lg-5">
+          <!-- Selected Order Bill -->
+          <div class="glass-card no-hover p-4 mb-4" id="bill-panel">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-receipt me-2 text-primary"></i>Bill Details</h5>
+            <div id="bill-content" class="text-center text-muted py-4">
+              <i class="fa-solid fa-arrow-pointer fa-2x mb-2"></i>
+              <p class="small">Select an order to view its bill</p>
+            </div>
+          </div>
+
+          <!-- Split Bill -->
+          <div class="glass-card no-hover p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-scissors me-2 text-info"></i>Split Bill</h5>
+            <div id="split-section" class="text-center text-muted py-2">
+              <p class="small">Select an order first</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Refund Modal -->
+      <div class="modal fade" id="refundModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header border-0">
+              <h5 class="modal-title fw-bold"><i class="fa-solid fa-rotate-left me-2 text-danger"></i>Process Refund</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="refund-order-id">
+              <div class="mb-3">
+                <label class="form-label small fw-600">Order ID</label>
+                <input type="text" class="form-control" id="refund-order-display" readonly style="background:var(--bg)">
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-600">Reason for Refund</label>
+                <textarea class="form-control" id="refund-reason" rows="3" placeholder="Describe the reason..."></textarea>
+              </div>
+              <div class="alert alert-warning small mb-0">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                This will cancel the order and mark payment as refunded.
+              </div>
+            </div>
+            <div class="modal-footer border-0">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button class="btn btn-danger" id="confirm-refund-btn"><i class="fa-solid fa-rotate-left me-1"></i>Confirm Refund</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `, cashierNav, 'Cashier Portal');
+
+    // Clock
+    function tickClock() {
+      const el = document.getElementById('cashier-clock');
+      if (el) el.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    tickClock(); setInterval(tickClock, 1000);
+
+    const refundModal = new bootstrap.Modal(document.getElementById('refundModal'));
+    let selectedOrderId = null;
+    let allOrders = [];
+
+    async function loadPendingOrders() {
+      const list = document.getElementById('pending-orders-list');
+      const countBadge = document.getElementById('pending-count');
+      try {
+        const res = await API.getPendingBillOrders();
+        allOrders = res.data || [];
+        countBadge.textContent = allOrders.length;
+
+        // Collection summary
+        const totalPending = allOrders.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0);
+        document.getElementById('collection-cards').innerHTML = `
+          ${collCard('fa-indian-rupee-sign', 'Pending Collection', '₹' + totalPending.toLocaleFixed(2), '#ff6b35')}
+          ${collCard('fa-clock', 'Pending Orders', allOrders.length, '#ffba08')}
+          ${collCard('fa-check-circle', 'COD Orders', allOrders.filter(o => o.payment_method === 'COD').length, '#2ec4b6')}
+          ${collCard('fa-credit-card', 'Card/UPI Orders', allOrders.filter(o => o.payment_method !== 'COD').length, '#4361ee')}
+        `;
+
+        if (!allOrders.length) {
+          list.innerHTML = `<div class="text-center py-5">
+            <i class="fa-solid fa-circle-check fa-3x text-success mb-3"></i>
+            <h6>All Clear!</h6>
+            <p class="small text-muted">No pending payment orders today.</p>
+          </div>`;
+          return;
+        }
+
+        list.innerHTML = allOrders.map(o => `
+          <div class="p-3 rounded-4 border mb-3 order-card ${selectedOrderId === o.order_id ? 'selected' : ''}"
+               style="background:var(--bg-card)" onclick="selectOrder('${o.order_id}', ${o.total_amount})">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="fw-bold" style="color:var(--primary)">${o.order_id}</div>
+                <div class="small text-muted">${o.customer_name || 'Guest'} · ${(o.order_type || 'delivery').toUpperCase()}</div>
+                ${o.table_number ? `<div class="small text-muted">Table ${o.table_number}</div>` : ''}
+              </div>
+              <div class="text-end">
+                <div class="amount-badge" style="color:var(--primary)">₹${parseFloat(o.total_amount || 0).toFixed(2)}</div>
+                <div class="small text-muted">${o.payment_method || 'COD'}</div>
+              </div>
+            </div>
+            <div class="d-flex gap-2 mt-2">
+              <button class="btn btn-sm btn-outline-primary flex-fill" onclick="event.stopPropagation();generateBill('${o.order_id}')">
+                <i class="fa-solid fa-receipt me-1"></i>Bill
+              </button>
+              <a class="btn btn-sm btn-outline-secondary flex-fill" href="${API.getBillPdfUrl(o.order_id)}" target="_blank" onclick="event.stopPropagation()">
+                <i class="fa-solid fa-file-pdf me-1"></i>PDF
+              </a>
+              <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();openRefund('${o.order_id}')" title="Refund">
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+            </div>
+          </div>`).join('');
+      } catch (err) {
+        list.innerHTML = `<div class="text-danger text-center py-4 small">${err.message}</div>`;
+      }
+    }
+
+    function collCard(icon, label, value, color) {
+      return `<div class="col-6 col-xl-3">
+        <div class="glass-card no-hover p-3 collection-card" style="border-left-color:${color}">
+          <i class="fa-solid ${icon} mb-1" style="color:${color}"></i>
+          <div class="fw-bold fs-5">${value}</div>
+          <div class="small text-muted">${label}</div>
+        </div>
+      </div>`;
+    }
+
+    function selectOrder(orderId, total) {
+      selectedOrderId = orderId;
+      generateBill(orderId);
+      // Show split option
+      document.getElementById('split-section').innerHTML = `
+        <div class="mb-2 small text-muted">Order: <strong>${orderId}</strong> — ₹${parseFloat(total).toFixed(2)}</div>
+        <div class="mb-2">
+          <label class="form-label small fw-600">Split into how many ways?</label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="split-ways" min="2" max="10" value="2">
+            <button class="btn" style="background:var(--primary);color:#fff" onclick="doSplitBill('${orderId}', ${total})">Split</button>
+          </div>
+        </div>
+        <div id="split-result"></div>`;
+      loadPendingOrders();
+    }
+
+    async function generateBill(orderId) {
+      const panel = document.getElementById('bill-content');
+      panel.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>';
+      try {
+        const res = await API.generateBillDetails(orderId);
+        const { order, bill } = res.data;
+        panel.innerHTML = `
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small text-muted mb-1"><span>Order ID</span><span class="fw-bold text-dark">${order.order_id}</span></div>
+            <div class="d-flex justify-content-between small text-muted mb-1"><span>Customer</span><span>${order.customer_name || 'Guest'}</span></div>
+            <div class="d-flex justify-content-between small text-muted mb-1"><span>Type</span><span>${order.order_type || 'delivery'}</span></div>
+            ${order.table_number ? `<div class="d-flex justify-content-between small text-muted mb-1"><span>Table</span><span>${order.table_number}</span></div>` : ''}
+            <div class="d-flex justify-content-between small text-muted mb-1"><span>Payment</span><span class="badge bg-primary-subtle text-primary">${order.payment_method}</span></div>
+          </div>
+          <hr>
+          <div class="small">
+            ${billRow('Subtotal', bill.subtotal)}
+            ${billRow('GST (5%)', bill.gst)}
+            ${bill.delivery_charge > 0 ? billRow('Delivery', bill.delivery_charge) : ''}
+            ${bill.discount > 0 ? billRow('Discount', -bill.discount, 'text-success') : ''}
+            ${bill.tip > 0 ? billRow('Tip', bill.tip) : ''}
+            ${billRow('Service Charge (10%)', bill.service_charge)}
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold" style="font-size:1.1rem">
+            <span>Grand Total</span>
+            <span style="color:var(--primary)">₹${parseFloat(bill.grand_total).toFixed(2)}</span>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-success flex-fill btn-sm" onclick="markPaid('${order.order_id}')">
+              <i class="fa-solid fa-circle-check me-1"></i>Mark Paid
+            </button>
+            <a href="${API.getBillPdfUrl(order.order_id)}" target="_blank" class="btn btn-outline-secondary btn-sm">
+              <i class="fa-solid fa-file-pdf me-1"></i>PDF
+            </a>
+          </div>`;
+      } catch (err) {
+        panel.innerHTML = `<p class="text-danger small">${err.message}</p>`;
+      }
+    }
+
+    function billRow(label, value, extraClass = '') {
+      return `<div class="d-flex justify-content-between mb-1 ${extraClass}">
+        <span class="text-muted">${label}</span><span>₹${parseFloat(value || 0).toFixed(2)}</span>
+      </div>`;
+    }
+
+    async function markPaid(orderId) {
+      try {
+        await API.updateOrderStatus(orderId, 'Delivered');
+        Utils.showToast('Order marked as paid & delivered ✓', 'success');
+        loadPendingOrders();
+        document.getElementById('bill-content').innerHTML = '<div class="text-success text-center py-4"><i class="fa-solid fa-circle-check fa-2x mb-2"></i><p>Payment recorded!</p></div>';
+      } catch (err) { Utils.showToast(err.message, 'error'); }
+    }
+
+    async function doSplitBill(orderId, total) {
+      const ways = parseInt(document.getElementById('split-ways').value) || 2;
+      const perHead = (parseFloat(total) / ways).toFixed(2);
+      const resultEl = document.getElementById('split-result');
+      resultEl.innerHTML = `<div class="alert alert-info small mb-0 mt-2">
+        <i class="fa-solid fa-scissors me-1"></i>
+        Split into <strong>${ways}</strong> ways: <strong>₹${perHead}</strong> per person
+        <br><span class="text-muted" style="font-size:0.75rem">Service charge + taxes included</span>
+      </div>`;
+    }
+
+    function openRefund(orderId) {
+      document.getElementById('refund-order-id').value = orderId;
+      document.getElementById('refund-order-display').value = orderId;
+      document.getElementById('refund-reason').value = '';
+      refundModal.show();
+    }
+
+    document.getElementById('confirm-refund-btn').addEventListener('click', async () => {
+      const orderId = document.getElementById('refund-order-id').value;
+      const reason = document.getElementById('refund-reason').value.trim();
+      if (!reason) { Utils.showToast('Please enter a reason', 'error'); return; }
+      try {
+        await API.processRefund({ order_id: orderId, reason });
+        Utils.showToast('Refund processed successfully', 'success');
+        refundModal.hide();
+        loadPendingOrders();
+      } catch (err) { Utils.showToast(err.message, 'error'); }
+    });
+
+    document.getElementById('cashier-refresh').addEventListener('click', loadPendingOrders);
+
+    // Patch toFixed for safety
+    Number.prototype.toLocaleFixed = function(digits) { return this.toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits }); };
+
+    loadPendingOrders();
+    setInterval(loadPendingOrders, 15000);
+  </script>
+</body>
+</html>
