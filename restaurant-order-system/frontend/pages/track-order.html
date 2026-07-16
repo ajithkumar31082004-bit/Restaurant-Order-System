@@ -250,10 +250,14 @@
     let autoRefreshTimer = null;
     let lastTrackedOrderId = null;
 
-    async function trackOrder(orderId) {
+    async function trackOrder(orderId, showSpinner = true) {
       if (!orderId) return;
       lastTrackedOrderId = orderId;
-      Utils.showLoader(true);
+      
+      if (showSpinner) {
+        Utils.showLoader(true);
+      }
+      
       try {
         const res = await API.trackOrder(orderId);
         const tracker = res.data;
@@ -290,7 +294,6 @@
         const etaValue = document.getElementById('est-delivery-time');
         if (isDineIn) {
           etaLabel.textContent = 'Estimated Ready Time';
-          // For dine-in, show ~20 min from order rather than delivery ETA
           etaValue.textContent = tracker.estimatedDelivery
             ? Utils.formatDate(tracker.estimatedDelivery)
             : '~20 minutes';
@@ -343,23 +346,24 @@
           : document.getElementById('delivery-timeline');
         timelineEl.style.setProperty('--progress', `${progressPercent}%`);
 
+        // Handle auto-refresh interval configuration based on status
+        clearInterval(autoRefreshTimer);
+        const terminalStatuses = ['Delivered', 'Served', 'Cancelled'];
+        if (!terminalStatuses.includes(tracker.currentStatus)) {
+          autoRefreshTimer = setInterval(() => {
+            if (lastTrackedOrderId) {
+              trackOrder(lastTrackedOrderId, false); // Run in background silently
+            }
+          }, 5000); // Poll status every 5 seconds
+        }
+
       } catch (err) {
         Utils.showToast(err.message || 'Order not found', 'error');
       } finally {
-        Utils.showLoader(false);
-      }
-
-      // If order is not yet completed, auto-refresh every 10 s
-      clearInterval(autoRefreshTimer);
-      const terminalStatuses = ['Delivered','Served','Cancelled'];
-      try {
-        const latest = await API.trackOrder(lastTrackedOrderId);
-        if (!terminalStatuses.includes(latest?.data?.currentStatus)) {
-          autoRefreshTimer = setInterval(() => {
-            if (lastTrackedOrderId) trackOrder(lastTrackedOrderId);
-          }, 10000);
+        if (showSpinner) {
+          Utils.showLoader(false);
         }
-      } catch(e) {}
+      }
     }
 
     document.getElementById('track-btn').addEventListener('click', () => {

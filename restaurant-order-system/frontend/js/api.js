@@ -104,6 +104,9 @@ const API = {
   getFloorMap: () => API.request('/tables/floor-map', { auth: false }),
   getTableQRCode: (id) => API.request(`/tables/${id}/qr`),
   updateTableStatus: (id, status) => API.request(`/tables/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  createTable: (data) => API.request('/tables', { method: 'POST', body: JSON.stringify(data) }),
+  updateTable: (id, data) => API.request(`/tables/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTable: (id) => API.request(`/tables/${id}`, { method: 'DELETE' }),
 
   getKitchenOrders: (params = {}) => API.request(`/kitchen/orders?${new URLSearchParams(params).toString()}`),
   updateKitchenStatus: (id, status) => API.request(`/kitchen/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),

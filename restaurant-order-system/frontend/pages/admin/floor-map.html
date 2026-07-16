@@ -22,6 +22,7 @@
       cursor: pointer;
       transition: all 0.2s ease;
       background: var(--bg-card);
+      position: relative;
     }
     .table-node:hover {
       transform: translateY(-4px);
@@ -32,10 +33,115 @@
     .table-node.reserved { border-color: #4361ee; color: #4361ee; background: rgba(67,97,238,0.05); }
     .table-node.cleaning { border-color: var(--warning); color: var(--warning); background: rgba(255,193,7,0.05); }
     .table-node.inactive { border-color: var(--text-muted); color: var(--text-muted); opacity: 0.5; }
+    
+    .table-actions-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 0.75rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .table-node:hover .table-actions-badge {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
   <div id="admin-layout"></div>
+
+  <!-- Table Edit/Create Modal -->
+  <div class="modal fade" id="tableModal" tabindex="-1" aria-labelledby="tableModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border);">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="tableModalLabel">Table Configuration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <input type="hidden" id="edit-table-id">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Table Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="table-number" placeholder="e.g. T-01">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Capacity (Pax) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="table-capacity" min="1" max="20" value="4">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Floor <span class="text-danger">*</span></label>
+              <select class="form-select" id="table-floor">
+                <option value="ground">Ground Floor</option>
+                <option value="first">First Floor</option>
+                <option value="rooftop">Rooftop Garden</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Table Type <span class="text-danger">*</span></label>
+              <select class="form-select" id="table-type">
+                <option value="indoor">Indoor Standard</option>
+                <option value="outdoor">Outdoor Terrace</option>
+                <option value="vip">VIP Lounge</option>
+                <option value="window">Window Seating</option>
+                <option value="bar">Bar Stool</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-600">Seating Status</label>
+              <select class="form-select" id="table-status">
+                <option value="available">Available 🟢</option>
+                <option value="occupied">Occupied 🔴</option>
+                <option value="reserved">Reserved 🔵</option>
+                <option value="cleaning">Cleaning 🟠</option>
+                <option value="inactive">Inactive white ⚪</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-600">Grid X</label>
+              <input type="number" class="form-control" id="table-x" value="0">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-600">Grid Y</label>
+              <input type="number" class="form-control" id="table-y" value="0">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-2 pb-3">
+          <button type="button" class="btn btn-outline-danger me-auto" id="btn-delete-table" onclick="deleteTable()" style="display: none;">
+            <i class="fa-solid fa-trash me-1"></i>Delete Table
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm fw-600" onclick="saveTable()">
+            <i class="fa-solid fa-floppy-disk me-1"></i>Save Table
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code View Modal -->
+  <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border);">
+        <div class="modal-header border-0 pb-0">
+          <h6 class="modal-title fw-bold" id="qr-modal-title">Table QR Code</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <div class="p-3 bg-white rounded-3 d-inline-block border mb-3">
+            <img id="qr-image" style="width: 200px; height: 200px; object-fit: contain;">
+          </div>
+          <p class="text-muted small mb-0" id="qr-url-text"></p>
+        </div>
+        <div class="modal-footer border-0 pt-0 text-center d-block">
+          <a class="btn btn-outline-primary btn-sm w-100 mb-2" id="qr-download-link" download="qrcode.png">
+            <i class="fa-solid fa-download me-1"></i>Download QR Code
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -46,18 +152,21 @@
     if (!Admin.requireAdmin()) throw new Error('Unauthorized');
 
     document.getElementById('admin-layout').innerHTML = Admin.layout('floor-map', `
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-          <h4 class="mb-0 fw-bold">Interactive Floor Map</h4>
-          <p class="text-muted small mb-0">Monitor live seating, reservations, and occupancy in real time</p>
+          <h4 class="mb-0 fw-bold"><i class="fa-solid fa-map me-2" style="color:var(--primary)"></i>Interactive Floor Map</h4>
+          <p class="text-muted small mb-0">Monitor live seating, reservations, occupancy, or edit the table layout in real time</p>
         </div>
         <div class="d-flex gap-2">
-          <select class="form-select form-select-sm" id="floor-select" style="width:auto;">
+          <button class="btn btn-primary fw-600" onclick="openAddTableModal()">
+            <i class="fa-solid fa-plus me-1"></i>Add Table
+          </button>
+          <select class="form-select" id="floor-select" style="width:auto;">
             <option value="ground" selected>Ground Floor</option>
             <option value="first">First Floor</option>
             <option value="rooftop">Rooftop Garden</option>
           </select>
-          <button class="btn btn-outline-secondary btn-sm" id="refresh-map">
+          <button class="btn btn-outline-secondary" id="refresh-map">
             <i class="fa-solid fa-arrows-rotate"></i>
           </button>
         </div>
@@ -70,6 +179,7 @@
           <div><i class="fa-solid fa-circle text-danger me-1"></i>Occupied</div>
           <div><i class="fa-solid fa-circle me-1" style="color:#4361ee"></i>Reserved</div>
           <div><i class="fa-solid fa-circle text-warning me-1"></i>Cleaning</div>
+          <div><i class="fa-solid fa-circle text-secondary me-1"></i>Inactive</div>
         </div>
       </div>
 
@@ -80,6 +190,9 @@
         </div>
       </div>
     `);
+
+    const tableModal = new bootstrap.Modal(document.getElementById('tableModal'));
+    const qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
 
     async function loadFloorMap() {
       const grid = document.getElementById('floor-tables-grid');
@@ -97,7 +210,8 @@
         grid.innerHTML = tables.map(t => {
           const icon = t.table_type === 'vip' ? 'fa-crown' : (t.table_type === 'outdoor' ? 'fa-tree' : 'fa-utensils');
           return `
-            <div class="table-node ${t.status}" onclick="changeTableStatus(${t.id}, '${t.table_number}', '${t.status}')">
+            <div class="table-node ${t.status}" onclick="manageTableOptions(${t.id}, '${t.table_number}', ${JSON.stringify(t).replace(/"/g, '&quot;')})">
+              <span class="table-actions-badge text-primary"><i class="fa-solid fa-gear"></i></span>
               <i class="fa-solid ${icon} fa-2x mb-3"></i>
               <h5 class="fw-bold mb-1">${t.table_number}</h5>
               <div class="small mb-1 text-capitalize">${t.table_type}</div>
@@ -110,17 +224,41 @@
       }
     }
 
+    function manageTableOptions(id, tableNumber, tableObj) {
+      Swal.fire({
+        title: `Manage Table ${tableNumber}`,
+        text: 'Choose an action to perform:',
+        icon: 'question',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: 'Change Status 🟢',
+        confirmButtonColor: '#ffba08',
+        denyButtonText: 'Edit Details ⚙️',
+        denyButtonColor: '#4361ee',
+        cancelButtonText: 'Close',
+        customClass: { popup: 'rounded-4' }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Status change quick option
+          changeTableStatus(id, tableNumber, tableObj.status);
+        } else if (result.isDenied) {
+          // Open edit details modal
+          openEditTableModal(tableObj);
+        }
+      });
+    }
+
     function changeTableStatus(id, tableNumber, currentStatus) {
       Swal.fire({
-        title: `Manage Seating: ${tableNumber}`,
-        text: `Update table status (current: ${currentStatus})`,
+        title: `Seating Status: ${tableNumber}`,
+        text: `Update status (current: ${currentStatus})`,
         input: 'select',
         inputOptions: {
           available: 'Available 🟢',
           occupied: 'Occupied 🔴',
           reserved: 'Reserved 🔵',
           cleaning: 'Cleaning 🟠',
-          inactive: 'Inactive ⚪'
+          inactive: 'Inactive White ⚪'
         },
         inputValue: currentStatus,
         showCancelButton: true,
@@ -131,7 +269,7 @@
         if (result.isConfirmed) {
           try {
             await API.updateTableStatus(id, result.value);
-            Utils.showToast(`Table ${tableNumber} updated successfully`, 'success');
+            Utils.showToast(`Table ${tableNumber} status updated`, 'success');
             loadFloorMap();
           } catch(err) {
             Utils.showToast(err.message, 'error');
@@ -140,10 +278,98 @@
       });
     }
 
+    function openAddTableModal() {
+      document.getElementById('tableModalLabel').textContent = 'Add New Table';
+      document.getElementById('edit-table-id').value = '';
+      document.getElementById('table-number').value = '';
+      document.getElementById('table-capacity').value = 4;
+      document.getElementById('table-floor').value = document.getElementById('floor-select').value;
+      document.getElementById('table-type').value = 'indoor';
+      document.getElementById('table-status').value = 'available';
+      document.getElementById('table-x').value = 0;
+      document.getElementById('table-y').value = 0;
+      document.getElementById('btn-delete-table').style.display = 'none';
+      tableModal.show();
+    }
+
+    function openEditTableModal(tableObj) {
+      document.getElementById('tableModalLabel').textContent = `Configure Table: ${tableObj.table_number}`;
+      document.getElementById('edit-table-id').value = tableObj.id;
+      document.getElementById('table-number').value = tableObj.table_number;
+      document.getElementById('table-capacity').value = tableObj.capacity;
+      document.getElementById('table-floor').value = tableObj.floor;
+      document.getElementById('table-type').value = tableObj.table_type;
+      document.getElementById('table-status').value = tableObj.status;
+      document.getElementById('table-x').value = tableObj.position_x || 0;
+      document.getElementById('table-y').value = tableObj.position_y || 0;
+      document.getElementById('btn-delete-table').style.display = 'block';
+      tableModal.show();
+    }
+
+    async function saveTable() {
+      const id = document.getElementById('edit-table-id').value;
+      const table_number = document.getElementById('table-number').value.trim();
+      const capacity = parseInt(document.getElementById('table-capacity').value, 10);
+      const floor = document.getElementById('table-floor').value;
+      const table_type = document.getElementById('table-type').value;
+      const status = document.getElementById('table-status').value;
+      const position_x = parseInt(document.getElementById('table-x').value, 10);
+      const position_y = parseInt(document.getElementById('table-y').value, 10);
+
+      if (!table_number || isNaN(capacity)) {
+        Utils.showToast('Please fill all required fields correctly', 'error');
+        return;
+      }
+
+      const tableData = { table_number, capacity, floor, table_type, status, position_x, position_y };
+
+      try {
+        if (id) {
+          await API.updateTable(id, tableData);
+          Utils.showToast('Table details updated successfully', 'success');
+        } else {
+          await API.createTable(tableData);
+          Utils.showToast('New table added successfully', 'success');
+        }
+        tableModal.hide();
+        loadFloorMap();
+      } catch (err) {
+        Utils.showToast(err.message, 'error');
+      }
+    }
+
+    async function deleteTable() {
+      const id = document.getElementById('edit-table-id').value;
+      const table_number = document.getElementById('table-number').value;
+      if (!id) return;
+
+      const confirm = await Swal.fire({
+        title: 'Delete Table?',
+        text: `Are you sure you want to permanently delete table ${table_number}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      if (confirm.isConfirmed) {
+        try {
+          await API.deleteTable(id);
+          Utils.showToast('Table deleted successfully', 'success');
+          tableModal.hide();
+          loadFloorMap();
+        } catch (err) {
+          Utils.showToast(err.message, 'error');
+        }
+      }
+    }
+
     document.getElementById('floor-select').addEventListener('change', loadFloorMap);
     document.getElementById('refresh-map').addEventListener('click', loadFloorMap);
 
     loadFloorMap();
+    // Auto-update floor plan every 5 seconds to show live table occupancy/seating updates
+    setInterval(loadFloorMap, 5000);
   </script>
 </body>
 </html>

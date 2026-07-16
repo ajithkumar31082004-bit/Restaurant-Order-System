@@ -425,12 +425,34 @@
       updateQrDisplay(select.value);
     }
 
-    function updateQrDisplay(tableNumber) {
+    async function updateQrDisplay(tableNumber) {
       if (!tableNumber) return;
       const img     = document.getElementById('qr-code-image');
       const loading = document.getElementById('qr-loading');
       const details = document.getElementById('qr-table-details');
       const link    = document.getElementById('qr-order-link');
+
+      if (loading) {
+        loading.style.display = 'block';
+        loading.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i>Loading QR...`;
+      }
+
+      try {
+        const table = tablesList.find(t => t.table_number === tableNumber);
+        if (table && table.id) {
+          const res = await API.getTableQRCode(table.id);
+          if (res.success && res.data && res.data.qr_data_url) {
+            img.src = res.data.qr_data_url;
+            img.onload = () => { if (loading) loading.style.display = 'none'; };
+            details.innerHTML = `<strong>${tableNumber}</strong> — Scan or click to order from this table`;
+            link.href = `table-order.html?table=${encodeURIComponent(tableNumber)}`;
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Backend QR loading failed, falling back to external API:', err.message);
+      }
+
       const url     = `${PRODUCTION_HOST}/pages/table-order.html?table=${encodeURIComponent(tableNumber)}`;
       const qrSrc   = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
       img.src       = qrSrc;
