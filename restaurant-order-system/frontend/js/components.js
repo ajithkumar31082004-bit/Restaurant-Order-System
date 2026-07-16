@@ -38,12 +38,20 @@ const Components = {
             <li class="nav-item"><a class="nav-link ${activePage === 'home' ? 'active' : ''}" href="index.html">Home</a></li>
             <li class="nav-item"><a class="nav-link ${activePage === 'menu' ? 'active' : ''}" href="menu.html">Menu</a></li>
             <li class="nav-item"><a class="nav-link ${activePage === 'experience' ? 'active' : ''}" href="restaurant-experience.html">Dining</a></li>
-            <li class="nav-item"><a class="nav-link ${activePage === 'loyalty' ? 'active' : ''}" href="loyalty.html">Loyalty</a></li>
-            <li class="nav-item"><a class="nav-link ${activePage === 'feedback' ? 'active' : ''}" href="feedback.html">Feedback</a></li>
-            <li class="nav-item"><a class="nav-link ${activePage === 'bill' ? 'active' : ''}" href="bill.html">Bill</a></li>
-            <li class="nav-item"><a class="nav-link" href="menu.html?offers=true">Offers</a></li>
-            <li class="nav-item"><a class="nav-link" href="index.html#about">About</a></li>
-            <li class="nav-item"><a class="nav-link ${activePage === 'contact' ? 'active' : ''}" href="contact.html">Contact</a></li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle ${['loyalty', 'feedback', 'bill', 'contact'].includes(activePage) ? 'active' : ''}" href="#" id="moreDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                More
+              </a>
+              <ul class="dropdown-menu" style="border-radius:12px;border:1px solid var(--border);background:var(--bg-card)">
+                <li><a class="dropdown-item ${activePage === 'loyalty' ? 'active' : ''}" href="loyalty.html"><i class="fa-solid fa-crown me-2 text-warning"></i>Loyalty Club</a></li>
+                <li><a class="dropdown-item" href="menu.html?offers=true"><i class="fa-solid fa-percent me-2 text-success"></i>Offers</a></li>
+                <li><a class="dropdown-item ${activePage === 'bill' ? 'active' : ''}" href="bill.html"><i class="fa-solid fa-file-invoice-dollar me-2 text-info"></i>Digital Bill</a></li>
+                <li><a class="dropdown-item ${activePage === 'feedback' ? 'active' : ''}" href="feedback.html"><i class="fa-solid fa-comment-dots me-2 text-secondary"></i>Feedback</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="index.html#about"><i class="fa-solid fa-circle-info me-2 text-primary"></i>About Us</a></li>
+                <li><a class="dropdown-item ${activePage === 'contact' ? 'active' : ''}" href="contact.html"><i class="fa-solid fa-envelope me-2 text-danger"></i>Contact</a></li>
+              </ul>
+            </li>
           </ul>
           <ul class="navbar-nav align-items-center gap-2" id="auth-links">
             ${authLinks}
