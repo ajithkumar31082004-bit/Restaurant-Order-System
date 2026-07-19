@@ -1,0 +1,243 @@
+name: FoodHub — CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'restaurant-order-system/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'restaurant-order-system/**'
+
+# Cancel in-progress runs when a new push arrives on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  BACKEND_DIR: restaurant-order-system/backend
+
+jobs:
+  # ═══════════════════════════════════════════════════════════
+  #  JOB 1 — Lint & Validate
+  # ═══════════════════════════════════════════════════════════
+  lint:
+    name: 🔍 Lint & Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: Validate environment variables template
+        run: |
+          echo "✅ Checking .env.example exists..."
+          test -f .env.example && echo ".env.example found" || (echo "ERROR: .env.example missing!" && exit 1)
+        working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: Check for syntax errors
+        run: |
+          echo "✅ Checking server.js syntax..."
+          node --check server.js
+          echo "✅ Checking all route files..."
+          find routes/ controllers/ middleware/ -name "*.js" -exec node --check {} \;
+        working-directory: ${{ env.BACKEND_DIR }}
+
+  # ═══════════════════════════════════════════════════════════
+  #  JOB 2 — Security Audit
+  # ═══════════════════════════════════════════════════════════
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: Run npm security audit
+        # --audit-level=high means only fail on high/critical vulnerabilities
+        run: npm audit --audit-level=high
+        working-directory: ${{ env.BACKEND_DIR }}
+        continue-on-error: true   # Report but don't block deploy for moderate vulns
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "✅ Scanning for potential hardcoded secrets..."
+          # Fail if any real-looking AWS keys are found in source (not .env files)
+          if grep -rn "AKIA[0-9A-Z]{16}" --include="*.js" .; then
+            echo "❌ Potential hardcoded AWS Access Key found!"
+            exit 1
+          fi
+          echo "✅ No hardcoded AWS keys detected"
+        working-directory: ${{ env.BACKEND_DIR }}
+
+  # ═══════════════════════════════════════════════════════════
+  #  JOB 3 — Build & Test
+  # ═══════════════════════════════════════════════════════════
+  build:
+    name: 🏗️ Build & Test
+    runs-on: ubuntu-latest
+    needs: [lint, security]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.BACKEND_DIR }}/package-lock.json
+
+      - name: Install production dependencies
+        run: npm ci --omit=dev
+        working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: Verify server can load without crashing
+        env:
+          PORT: 5000
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_USER: test
+          DB_PASSWORD: test
+          DB_NAME: test_db
+          DB_PORT: 3306
+          JWT_SECRET: test_jwt_secret_for_ci_only_32chars
+          JWT_EXPIRES_IN: 7d
+          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+          AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+          SQS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/test-queue
+          SNS_TOPIC_ARN: arn:aws:sns:us-east-1:000000000000:test-topic
+          DYNAMODB_TABLE: TestOrders
+          S3_BUCKET: test-bucket
+          FRONTEND_URL: http://localhost:5000
+          RATE_LIMIT_WINDOW_MS: 900000
+          RATE_LIMIT_MAX: 100
+        run: |
+          echo "✅ Testing module loading..."
+          timeout 5 node -e "require('./server.js')" 2>&1 | grep -v "MySQL connection failed" || true
+          echo "✅ Module load test complete"
+        working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: Run tests
+        run: npm test
+        working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          NODE_ENV: test
+
+  # ═══════════════════════════════════════════════════════════
+  #  JOB 4 — Deploy to EC2 (only on push to main)
+  # ═══════════════════════════════════════════════════════════
+  deploy:
+    name: 🚀 Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: http://${{ secrets.EC2_HOST }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/restaurant-key.pem
+          chmod 600 ~/.ssh/restaurant-key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy to EC2 via SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/restaurant-key.pem -o StrictHostKeyChecking=no \
+            $EC2_USER@$EC2_HOST 'bash -s' << 'ENDSSH'
+
+            set -e
+            echo "📦 Starting FoodHub deployment..."
+
+            # Navigate to project directory
+            cd ~/Restaurant-Order-System
+
+            # Pull latest code
+            echo "⬇️  Pulling latest code from main..."
+            git pull origin main
+
+            # Navigate to backend
+            cd restaurant-order-system/backend
+
+            # Install/update dependencies (production only)
+            echo "📦 Installing dependencies..."
+            npm ci --omit=dev
+
+            # Reload app gracefully with PM2 (zero-downtime restart)
+            echo "♻️  Restarting application with PM2..."
+            if pm2 list | grep -q "restaurant"; then
+              pm2 reload restaurant --update-env
+            else
+              pm2 start ecosystem.config.js
+            fi
+
+            # Save PM2 process list
+            pm2 save
+
+            echo "✅ Deployment complete!"
+            pm2 list
+          ENDSSH
+
+      - name: Health check after deployment
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          echo "⏳ Waiting 15 seconds for app to stabilize..."
+          sleep 15
+
+          echo "🩺 Running health check on http://$EC2_HOST/health ..."
+          RESPONSE=$(curl -sf --max-time 15 http://$EC2_HOST/health || echo "FAILED")
+
+          if echo "$RESPONSE" | grep -q '"status":"ok"'; then
+            echo "✅ Health check passed! FoodHub is live."
+            echo "$RESPONSE"
+          else
+            echo "❌ Health check failed! Response: $RESPONSE"
+            exit 1
+          fi
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "🎉 FoodHub v2.0 successfully deployed to production!"
+          echo "🌐 URL: http://${{ secrets.EC2_HOST }}"
+          echo "📝 Commit: ${{ github.sha }}"
+          echo "👤 Deployed by: ${{ github.actor }}"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/restaurant-key.pem

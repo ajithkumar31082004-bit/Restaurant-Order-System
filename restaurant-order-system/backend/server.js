@@ -62,6 +62,35 @@ app.use('/api/', limiter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
+// ── Health Check Endpoint (for DevOps, Docker, and CI/CD) ─────────────────
+app.get('/health', async (req, res) => {
+  const healthInfo = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    environment: config.nodeEnv,
+    version: '2.0.0',
+    memory: {
+      heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+      rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`
+    },
+    database: 'checking'
+  };
+
+  // Check DB connectivity
+  try {
+    const pool = require('./config/database');
+    await pool.execute('SELECT 1');
+    healthInfo.database = 'connected';
+  } catch (e) {
+    healthInfo.database = 'disconnected';
+    healthInfo.status = 'degraded';
+  }
+
+  const statusCode = healthInfo.status === 'ok' ? 200 : 503;
+  res.status(statusCode).json(healthInfo);
+});
+
 app.get('/api', (req, res) => {
   res.json({
     success: true,

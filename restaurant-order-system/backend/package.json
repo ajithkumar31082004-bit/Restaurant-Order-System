@@ -5,9 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:pm2": "pm2 start ecosystem.config.js --env production",
     "dev": "nodemon server.js",
     "seed": "node scripts/seedAdmin.js",
-    "test": "echo \"No tests configured\" && exit 0"
+    "setup:db": "node scripts/setupDb.js && node scripts/seedAdmin.js && node scripts/populateMenu.js",
+    "lint": "node --check server.js && find routes controllers middleware -name '*.js' -exec node --check {} \\;",
+    "test": "echo \"Tests: npm audit && node --check server.js\" && npm audit --audit-level=high && node --check server.js",
+    "health": "curl -s http://localhost:5000/health | node -e \"process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.stringify(JSON.parse(d),null,2)))\""
   },
   "keywords": [
     "restaurant",

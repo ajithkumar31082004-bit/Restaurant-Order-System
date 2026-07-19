@@ -1,0 +1,24 @@
+# ── Terraform Variables — Copy this file to terraform.tfvars and fill in values ──
+# terraform.tfvars is listed in .gitignore and should NEVER be committed.
+
+aws_region    = "us-east-1"
+environment   = "production"
+
+# EC2 key pair name (must already exist in your AWS account)
+key_pair_name = "restaurant-key"
+
+# Restrict SSH to your IP (find it at https://whatismyip.com) — e.g. "1.2.3.4/32"
+admin_ip_cidr = "0.0.0.0/0"
+
+# RDS credentials (never commit real passwords)
+db_username = "admin"
+db_password = "Restaurant@123_CHANGE_THIS"
+
+# Email to receive SNS order notifications
+notification_email = "your-email@gmail.com"
+
+# S3 bucket name (must be globally unique)
+s3_bucket_name = "restaurant-images-yourname"
+
+# Path to the Lambda ZIP file (relative to the terraform/ directory)
+lambda_zip_path = "../restaurant-order-system/backend/aws/lambda/lambda.zip"

@@ -1,5 +1,7 @@
 # 🍕 FoodHub — Restaurant Order System
 
+[![CI/CD Pipeline](https://github.com/ajithkumar31082004-bit/Restaurant-Order-System/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/ajithkumar31082004-bit/Restaurant-Order-System/actions/workflows/ci-cd.yml)
+
 A full-stack restaurant ordering platform built with **Node.js**, **MySQL**, and **AWS cloud services**. Supports customer ordering, real-time order tracking, admin management, and event-driven order processing via SQS + Lambda + DynamoDB.
 
 ---
@@ -11,6 +13,9 @@ A full-stack restaurant ordering platform built with **Node.js**, **MySQL**, and
 - [Architecture](#-architecture)
 - [Project Structure](#-project-structure)
 - [Local Setup](#-local-setup)
+- [Docker Setup](#-docker-setup)
+- [DevOps & CI/CD](#-devops--cicd)
+- [Terraform (IaC)](#-terraform-infrastructure-as-code)
 - [AWS Deployment](#-aws-deployment)
 - [API Reference](#-api-reference)
 - [Admin Panel](#-admin-panel)
@@ -380,6 +385,124 @@ RATE_LIMIT_MAX=100
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | `admin@restaurant.com` | `Admin@123` |
+
+---
+
+## 🐳 Docker Setup
+
+### Local Development (with local MySQL)
+
+```bash
+# 1. Copy your .env file
+cp backend/.env.example backend/.env
+# Edit backend/.env with your values
+
+# 2. Start everything (backend + MySQL)
+docker-compose up -d
+
+# 3. Open in browser
+http://localhost:5000
+
+# 4. View logs
+docker-compose logs -f backend
+
+# 5. Stop
+docker-compose down
+```
+
+### Production (with AWS RDS)
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+---
+
+## ⚙️ DevOps & CI/CD
+
+This project uses **GitHub Actions** for automated CI/CD. Every push to `main` triggers:
+
+| Stage | What it does |
+|-------|--------------|
+| 🔍 **Lint** | Checks syntax of all JS files, validates `.env.example` |
+| 🔒 **Security** | `npm audit`, scans for hardcoded secrets |
+| 🏗️ **Build** | Installs production deps, verifies module loading |
+| 🚀 **Deploy** | SSH to EC2 → `git pull` → `npm ci` → `pm2 reload` |
+| 🩺 **Health Check** | Hits `/health` endpoint to confirm deployment success |
+
+### Required GitHub Secrets
+
+Go to your repo → **Settings → Secrets and variables → Actions** → add:
+
+| Secret | Value |
+|--------|-------|
+| `EC2_HOST` | Your EC2 public IP (e.g. `54.123.45.67`) |
+| `EC2_USER` | `ec2-user` |
+| `EC2_SSH_KEY` | Contents of `restaurant-key.pem` |
+
+### PM2 Commands
+
+```bash
+# Start using ecosystem config
+pm2 start ecosystem.config.js --env production
+
+# Zero-downtime reload
+pm2 reload restaurant
+
+# View logs
+pm2 logs restaurant --lines 50
+
+# Monitor
+pm2 monit
+```
+
+---
+
+## 🏗️ Terraform (Infrastructure as Code)
+
+All AWS resources can be provisioned automatically with Terraform.
+
+### Prerequisites
+- [Install Terraform](https://developer.hashicorp.com/terraform/downloads) (v1.5+)
+- AWS credentials configured (`aws configure`)
+
+### Usage
+
+```bash
+cd terraform
+
+# 1. Copy and fill in variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+
+# 2. Initialize Terraform
+terraform init
+
+# 3. Preview what will be created
+terraform plan
+
+# 4. Apply (creates all AWS resources)
+terraform apply
+
+# 5. After apply — copy the outputs to your .env
+terraform output env_file_values
+
+# 6. Destroy all resources when done
+terraform destroy
+```
+
+### Resources Created by Terraform
+
+| Resource | Type | Cost |
+|----------|------|------|
+| EC2 Instance | t2.micro | Free tier |
+| Elastic IP | Static IP | Free (when attached) |
+| RDS MySQL | db.t3.micro | Free tier |
+| SQS Queue + DLQ | Standard | ~Free |
+| DynamoDB | On-demand | Pay per request |
+| SNS Topic | Standard | ~Free |
+| S3 Bucket | Standard | ~Free |
+| Lambda Function | Node.js 20.x | Free tier |
 
 ---
 

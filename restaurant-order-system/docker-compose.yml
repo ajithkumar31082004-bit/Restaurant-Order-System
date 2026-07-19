@@ -1,0 +1,74 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────
+#  FoodHub — Local Development Docker Compose
+#  Usage: docker-compose up -d
+# ─────────────────────────────────────────────
+
+services:
+
+  # ── MySQL Database (local dev only; production uses AWS RDS) ──
+  mysql:
+    image: mysql:8.0
+    container_name: foodhub-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-Restaurant@123}
+      MYSQL_DATABASE: ${DB_NAME:-restaurant_db}
+      MYSQL_USER: ${DB_USER:-restaurant_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-Restaurant@123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../database/mysql.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - foodhub-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-Restaurant@123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Node.js Backend API ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: foodhub-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mysql           # Override to use the local mysql service
+    ports:
+      - "5000:5000"
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - foodhub-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# ── Named Volumes ─────────────────────────────────────────────
+volumes:
+  mysql_data:
+    name: foodhub-mysql-data
+  uploads_data:
+    name: foodhub-uploads
+
+# ── Networks ──────────────────────────────────────────────────
+networks:
+  foodhub-network:
+    name: foodhub-network
+    driver: bridge

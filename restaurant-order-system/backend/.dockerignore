@@ -1,0 +1,54 @@
+# Dependencies (re-installed during build)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files (injected at runtime via --env-file or secrets)
+.env
+.env.*
+!.env.example
+
+# Git and version control
+.git/
+.gitignore
+.gitattributes
+
+# Development tools and configs
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+pm2-logs/
+
+# Test artifacts
+coverage/
+.nyc_output/
+test/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Build artifacts
+dist/
+build/
+
+# Uploads (mounted as a Docker volume in production)
+uploads/
+
+# Local scripts and docs
+scripts/deploy.sh
+*.md
+!README.md
+
+# Terraform and CI files
+terraform/
+.github/
+nginx/
