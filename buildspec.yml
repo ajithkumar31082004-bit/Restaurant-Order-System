@@ -72,13 +72,6 @@ phases:
       - docker push $IMAGE_FULL
       - echo "Writing imagedefinitions.json..."
       - printf '[{"name":"restaurant-order-system","imageUri":"%s"}]' $IMAGE_FULL > imagedefinitions.json
-      - cat imagedefinitions.json
-      - echo "Writing SSH key from SSM Parameter Store..."
-      - aws ssm get-parameter --name "/foodhub/ec2-ssh-key" --with-decryption --query Parameter.Value --output text > /tmp/ec2_key.pem
-      - chmod 600 /tmp/ec2_key.pem
-      - echo "Deploying to EC2..."
-      - ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem $EC2_USER@$EC2_HOST "aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 491694398940.dkr.ecr.ap-south-1.amazonaws.com && docker pull 491694398940.dkr.ecr.ap-south-1.amazonaws.com/dev/restaurant-order-system:latest && docker stop foodhub-backend || true && docker rm foodhub-backend || true && docker run -d --name foodhub-backend --restart always --env NODE_ENV=production --env DB_HOST=$DB_HOST --env DB_USER=$DB_USER --env DB_PASSWORD=$DB_PASSWORD --env DB_NAME=$DB_NAME --env JWT_SECRET=$JWT_SECRET -p 5000:5000 491694398940.dkr.ecr.ap-south-1.amazonaws.com/dev/restaurant-order-system:latest && docker image prune -f"
-      - rm -f /tmp/ec2_key.pem
       - echo "=== DEPLOYMENT COMPLETE ==="
 
 artifacts:
