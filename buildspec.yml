@@ -60,12 +60,8 @@ phases:
     commands:
       - echo "=== Pre-Build phase — $(date) ==="
 
-      # Build a deterministic image tag from the git commit SHA
-      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
-      - IMAGE_TAG="${COMMIT_HASH:-latest}"
       - ECR_URI="491694398940.dkr.ecr.ap-south-1.amazonaws.com/dev/restaurant-order-system"
-      - IMAGE_FULL="${ECR_URI}:${IMAGE_TAG}"
-      - IMAGE_LATEST="${ECR_URI}:latest"
+      - IMAGE_FULL="${ECR_URI}:latest"
 
       # Authenticate Docker to Amazon ECR
       - echo "Logging in to Amazon ECR…"
@@ -106,7 +102,6 @@ phases:
           --target production \
           --build-arg NODE_ENV=production \
           --tag "${IMAGE_FULL}" \
-          --tag "${IMAGE_LATEST}" \
           restaurant-order-system/backend
 
   # ── 4. Post-Build ────────────────────────────────────────────────────────────
@@ -117,7 +112,6 @@ phases:
       # ── Push image to ECR ─────────────────────────────────────────────────
       - echo "Pushing Docker image to ECR…"
       - docker push "${IMAGE_FULL}"
-      - docker push "${IMAGE_LATEST}"
 
       # ── Write imagedefinitions.json for CodeDeploy / ECS (optional) ──────
       - |
