@@ -1,38 +1,37 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #  buildspec.yml — AWS CodeBuild Build Specification
 #  Project  : FoodHub Restaurant Order System
-#  Pipeline : CodePipeline → CodeBuild → ECR → ECS
+#  Pipeline : CodePipeline → CodeBuild → ECR → EC2 (Docker)
 #
 #  ECR Registry : 491694398940.dkr.ecr.ap-south-1.amazonaws.com
-#  ECR Repo     : restaurant-order-system
-#  ECS Cluster  : arn:aws:ecs:ap-south-1:491694398940:cluster/restaurant-order-system
+#  ECR Repo     : dev/restaurant-order-system
+#  ECR ARN      : arn:aws:ecr:ap-south-1:491694398940:repository/dev/restaurant-order-system
 #  Region       : ap-south-1
 #
-#  Required CodeBuild environment variable (set in the pipeline / project):
-#    ECS_SERVICE_NAME        Name of the ECS service to update (e.g. restaurant-backend)
+#  Required CodeBuild environment variables (set in the pipeline / project):
+#    EC2_HOST                Public IP or DNS of the EC2 instance
+#    EC2_USER                e.g. ubuntu  or  ec2-user
+#    EC2_SSH_KEY_SECRET      AWS Secrets Manager secret name holding the PEM key
+#    CONTAINER_PORT          e.g. 5000  (default used if not set)
 #
 #  Required IAM permissions for the CodeBuild service role:
 #    ecr:GetAuthorizationToken, ecr:BatchCheckLayerAvailability,
 #    ecr:InitiateLayerUpload, ecr:UploadLayerPart, ecr:CompleteLayerUpload,
-#    ecr:PutImage, secretsmanager:GetSecretValue,
-#    ecs:UpdateService, ecs:DescribeServices
+#    ecr:PutImage, secretsmanager:GetSecretValue
 # ─────────────────────────────────────────────────────────────────────────────
 
 version: 0.2
 
 env:
   variables:
-    # ── ECR details (hardcoded) ───────────────────────────────────────────────
-    AWS_ACCOUNT_ID:     "491694398940"
+    # ── ECR details (hardcoded — no env var needed) ───────────────────────────
+    AWS_ACCOUNT_ID:   "491694398940"
     AWS_DEFAULT_REGION: "ap-south-1"
-    ECR_REPO_NAME:      "restaurant-order-system"
-    ECR_REGISTRY:       "491694398940.dkr.ecr.ap-south-1.amazonaws.com"
-    # ── ECS details (hardcoded) ───────────────────────────────────────────────
-    ECS_CLUSTER:        "restaurant-order-system"
-    ECS_CLUSTER_ARN:    "arn:aws:ecs:ap-south-1:491694398940:cluster/restaurant-order-system"
-    # ECS_SERVICE_NAME must be set in CodeBuild project / pipeline env vars
+    ECR_REPO_NAME:    "dev/restaurant-order-system"
+    ECR_REGISTRY:     "491694398940.dkr.ecr.ap-south-1.amazonaws.com"
     # Derived image tag — overridden at runtime by the "pre_build" phase
-    IMAGE_TAG:          "latest"
+    IMAGE_TAG:        "latest"
+    CONTAINER_PORT:   "5000"
 
   # Inject sensitive values from AWS Secrets Manager at build time
   secrets-manager:
@@ -64,7 +63,7 @@ phases:
       # Build a deterministic image tag from the git commit SHA
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
       - IMAGE_TAG="${COMMIT_HASH:-latest}"
-      - ECR_URI="491694398940.dkr.ecr.ap-south-1.amazonaws.com/restaurant-order-system"
+      - ECR_URI="491694398940.dkr.ecr.ap-south-1.amazonaws.com/dev/restaurant-order-system"
       - IMAGE_FULL="${ECR_URI}:${IMAGE_TAG}"
       - IMAGE_LATEST="${ECR_URI}:latest"
 
@@ -120,7 +119,7 @@ phases:
       - docker push "${IMAGE_FULL}"
       - docker push "${IMAGE_LATEST}"
 
-      # ── Write imagedefinitions.json (consumed by CodePipeline ECS deploy) ─
+      # ── Write imagedefinitions.json for CodeDeploy / ECS (optional) ──────
       - |
         printf '[{"name":"%s","imageUri":"%s"}]' \
           "${ECR_REPO_NAME}" \
@@ -128,24 +127,60 @@ phases:
           > imagedefinitions.json
       - cat imagedefinitions.json
 
-      # ── Deploy to ECS — trigger a new deployment on the cluster ──────────
-      - echo "Deploying to ECS cluster: ${ECS_CLUSTER} / service: ${ECS_SERVICE_NAME}…"
+      # ── Deploy to EC2 via SSH ─────────────────────────────────────────────
+      - echo "Fetching SSH key from Secrets Manager…"
       - |
-        aws ecs update-service \
-          --cluster "${ECS_CLUSTER}" \
-          --service "${ECS_SERVICE_NAME}" \
-          --force-new-deployment \
-          --region ap-south-1
+        aws secretsmanager get-secret-value \
+          --secret-id "${EC2_SSH_KEY_SECRET}" \
+          --query SecretString \
+          --output text > /tmp/ec2_key.pem
+        chmod 600 /tmp/ec2_key.pem
 
-      # ── Wait for the service to stabilise (tasks healthy) ─────────────────
-      - echo "Waiting for ECS service to reach steady state…"
+      - echo "Deploying to EC2 at ${EC2_HOST}…"
       - |
-        aws ecs wait services-stable \
-          --cluster "${ECS_CLUSTER}" \
-          --services "${ECS_SERVICE_NAME}" \
-          --region ap-south-1
+        ssh -o StrictHostKeyChecking=no \
+            -i /tmp/ec2_key.pem \
+            "${EC2_USER}@${EC2_HOST}" \
+            "
+              set -e
 
-      - echo "=== ECS deployment complete — $(date) ==="
+              # Authenticate Docker on the EC2 instance
+              aws ecr get-login-password --region ap-south-1 \
+                | docker login --username AWS --password-stdin \
+                  491694398940.dkr.ecr.ap-south-1.amazonaws.com
+
+              # Pull the newly built image
+              docker pull ${IMAGE_FULL}
+
+              # Gracefully stop & remove the old container (ignore errors)
+              docker stop foodhub-backend 2>/dev/null || true
+              docker rm   foodhub-backend 2>/dev/null || true
+
+              # Start the new container
+              docker run -d \
+                --name foodhub-backend \
+                --restart always \
+                --env NODE_ENV=production \
+                --env DB_HOST='${DB_HOST}' \
+                --env DB_USER='${DB_USER}' \
+                --env DB_PASSWORD='${DB_PASSWORD}' \
+                --env DB_NAME='${DB_NAME}' \
+                --env JWT_SECRET='${JWT_SECRET}' \
+                --publish ${CONTAINER_PORT}:${CONTAINER_PORT} \
+                ${IMAGE_FULL}
+
+              # Brief health-check wait
+              sleep 10
+              docker inspect --format='{{.State.Status}}' foodhub-backend
+
+              # Prune dangling images to reclaim disk space
+              docker image prune -f
+            "
+
+      - echo "=== Deployment complete — $(date) ==="
+
+      # ── Clean up local key ────────────────────────────────────────────────
+      - rm -f /tmp/ec2_key.pem
 
 # ── Artifacts ────────────────────────────────────────────────────────────────
 # imagedefinitions.json is consumed by a downstream CodeDeploy / ECS action.
