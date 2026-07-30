@@ -69,7 +69,7 @@ phases:
 
       # Authenticate Docker to Amazon ECR
       - echo "Logging in to Amazon ECR…"
-      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${ECR_URI}
+      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 491694398940.dkr.ecr.ap-south-1.amazonaws.com
 
       # Install backend dependencies for test/lint
       - echo "Installing Node.js dependencies…"
