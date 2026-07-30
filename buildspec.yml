@@ -1,0 +1,196 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  buildspec.yml — AWS CodeBuild Build Specification
+#  Project  : FoodHub Restaurant Order System
+#  Pipeline : CodePipeline → CodeBuild → ECR → EC2 (Docker)
+#
+#  ECR Registry : 491694398940.dkr.ecr.ap-south-1.amazonaws.com
+#  ECR Repo     : restaurant-order-system
+#  Region       : ap-south-1
+#
+#  Required CodeBuild environment variables (set in the pipeline / project):
+#    EC2_HOST                Public IP or DNS of the EC2 instance
+#    EC2_USER                e.g. ubuntu  or  ec2-user
+#    EC2_SSH_KEY_SECRET      AWS Secrets Manager secret name holding the PEM key
+#    CONTAINER_PORT          e.g. 5000  (default used if not set)
+#
+#  Required IAM permissions for the CodeBuild service role:
+#    ecr:GetAuthorizationToken, ecr:BatchCheckLayerAvailability,
+#    ecr:InitiateLayerUpload, ecr:UploadLayerPart, ecr:CompleteLayerUpload,
+#    ecr:PutImage, secretsmanager:GetSecretValue
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 0.2
+
+env:
+  variables:
+    # ── ECR details (hardcoded — no env var needed) ───────────────────────────
+    AWS_ACCOUNT_ID:   "491694398940"
+    AWS_DEFAULT_REGION: "ap-south-1"
+    ECR_REPO_NAME:    "restaurant-order-system"
+    ECR_REGISTRY:     "491694398940.dkr.ecr.ap-south-1.amazonaws.com"
+    # Derived image tag — overridden at runtime by the "pre_build" phase
+    IMAGE_TAG:        "latest"
+    CONTAINER_PORT:   "5000"
+
+  # Inject sensitive values from AWS Secrets Manager at build time
+  secrets-manager:
+    DB_HOST:     "foodhub/prod:DB_HOST"
+    DB_USER:     "foodhub/prod:DB_USER"
+    DB_PASSWORD: "foodhub/prod:DB_PASSWORD"
+    DB_NAME:     "foodhub/prod:DB_NAME"
+    JWT_SECRET:  "foodhub/prod:JWT_SECRET"
+
+phases:
+
+  # ── 1. Install ───────────────────────────────────────────────────────────────
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "=== Install phase — $(date) ==="
+      - node --version
+      - npm --version
+      # Install the AWS CLI v2 helper for ECR login (pre-installed on standard images,
+      # but kept explicit for custom images)
+      - pip3 install --quiet --upgrade awscli || true
+
+  # ── 2. Pre-Build ─────────────────────────────────────────────────────────────
+  pre_build:
+    commands:
+      - echo "=== Pre-Build phase — $(date) ==="
+
+      # Build a deterministic image tag from the git commit SHA
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
+      - IMAGE_TAG="${COMMIT_HASH:-latest}"
+      - ECR_URI="491694398940.dkr.ecr.ap-south-1.amazonaws.com/restaurant-order-system"
+      - IMAGE_FULL="${ECR_URI}:${IMAGE_TAG}"
+      - IMAGE_LATEST="${ECR_URI}:latest"
+
+      # Authenticate Docker to Amazon ECR
+      - echo "Logging in to Amazon ECR…"
+      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${ECR_URI}
+
+      # Install backend dependencies for test/lint
+      - echo "Installing Node.js dependencies…"
+      - cd restaurant-order-system/backend
+      - npm ci --omit=dev
+      - cd ../..
+
+  # ── 3. Build ─────────────────────────────────────────────────────────────────
+  build:
+    commands:
+      - echo "=== Build phase — $(date) ==="
+
+      # ── Lint / syntax check ────────────────────────────────────────────────
+      - echo "Running syntax check…"
+      - cd restaurant-order-system/backend
+      - node --check server.js
+      - |
+        for f in $(find routes controllers middleware services -name "*.js" 2>/dev/null); do
+          node --check "$f"
+        done
+      - cd ../..
+
+      # ── Security audit ────────────────────────────────────────────────────
+      - echo "Running npm audit…"
+      - cd restaurant-order-system/backend
+      - npm audit --audit-level=high || true    # warn-only; change to fail as needed
+      - cd ../..
+
+      # ── Docker build ──────────────────────────────────────────────────────
+      - echo "Building Docker image: ${IMAGE_FULL}"
+      - |
+        docker build \
+          --file restaurant-order-system/backend/Dockerfile \
+          --target production \
+          --build-arg NODE_ENV=production \
+          --tag "${IMAGE_FULL}" \
+          --tag "${IMAGE_LATEST}" \
+          restaurant-order-system/backend
+
+  # ── 4. Post-Build ────────────────────────────────────────────────────────────
+  post_build:
+    commands:
+      - echo "=== Post-Build phase — $(date) ==="
+
+      # ── Push image to ECR ─────────────────────────────────────────────────
+      - echo "Pushing Docker image to ECR…"
+      - docker push "${IMAGE_FULL}"
+      - docker push "${IMAGE_LATEST}"
+
+      # ── Write imagedefinitions.json for CodeDeploy / ECS (optional) ──────
+      - |
+        printf '[{"name":"%s","imageUri":"%s"}]' \
+          "${ECR_REPO_NAME}" \
+          "${IMAGE_FULL}" \
+          > imagedefinitions.json
+      - cat imagedefinitions.json
+
+      # ── Deploy to EC2 via SSH ─────────────────────────────────────────────
+      - echo "Fetching SSH key from Secrets Manager…"
+      - |
+        aws secretsmanager get-secret-value \
+          --secret-id "${EC2_SSH_KEY_SECRET}" \
+          --query SecretString \
+          --output text > /tmp/ec2_key.pem
+        chmod 600 /tmp/ec2_key.pem
+
+      - echo "Deploying to EC2 at ${EC2_HOST}…"
+      - |
+        ssh -o StrictHostKeyChecking=no \
+            -i /tmp/ec2_key.pem \
+            "${EC2_USER}@${EC2_HOST}" \
+            "
+              set -e
+
+              # Authenticate Docker on the EC2 instance
+              aws ecr get-login-password --region ap-south-1 \
+                | docker login --username AWS --password-stdin \
+                  491694398940.dkr.ecr.ap-south-1.amazonaws.com
+
+              # Pull the newly built image
+              docker pull ${IMAGE_FULL}
+
+              # Gracefully stop & remove the old container (ignore errors)
+              docker stop foodhub-backend 2>/dev/null || true
+              docker rm   foodhub-backend 2>/dev/null || true
+
+              # Start the new container
+              docker run -d \
+                --name foodhub-backend \
+                --restart always \
+                --env NODE_ENV=production \
+                --env DB_HOST='${DB_HOST}' \
+                --env DB_USER='${DB_USER}' \
+                --env DB_PASSWORD='${DB_PASSWORD}' \
+                --env DB_NAME='${DB_NAME}' \
+                --env JWT_SECRET='${JWT_SECRET}' \
+                --publish ${CONTAINER_PORT}:${CONTAINER_PORT} \
+                ${IMAGE_FULL}
+
+              # Brief health-check wait
+              sleep 10
+              docker inspect --format='{{.State.Status}}' foodhub-backend
+
+              # Prune dangling images to reclaim disk space
+              docker image prune -f
+            "
+
+      - echo "=== Deployment complete — $(date) ==="
+
+      # ── Clean up local key ────────────────────────────────────────────────
+      - rm -f /tmp/ec2_key.pem
+
+# ── Artifacts ────────────────────────────────────────────────────────────────
+# imagedefinitions.json is consumed by a downstream CodeDeploy / ECS action.
+# Build logs are retained automatically in CloudWatch Logs.
+artifacts:
+  files:
+    - imagedefinitions.json
+  discard-paths: yes
+
+# ── Cache ─────────────────────────────────────────────────────────────────────
+# Caching node_modules across builds dramatically reduces install time.
+cache:
+  paths:
+    - restaurant-order-system/backend/node_modules/**/*
